@@ -1,0 +1,180 @@
+---
+title: "Genealogical data"
+author: "Tim Riffe"
+date: "11/9/2019"
+output: html_document
+bibliography: references.bib
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+Genealogical data can have different structures, ranging from complicated relational trees to tidy individualized data with minimal parentage links. Genealogical data is a particular kind of network data, and any data structure that exists to represent a network can be used to represent it. Such data allow you to explore dimensions of population structure that cannot be known from a census, and that no population register would ever allow you to calculate. You can also measure fertility, mortality, bereavment, and such things in oddly stratified ways. Diego Alburrez has kindly given me a big hunk of genealogical data from [FamiLinx](https://familinx.org/). These data have been used in large scale projects to detect demographic patterns, an dyou can find a good description of the data in @kaplanis2018quantitative. He'll give you a module on accounting for biases in online data (or similar) and may use genealogical data as a case study, so let's get some exercise wrangling with it.
+
+Prerequisites: we'll use the `here` package and `tidyverse` tools for the time being.
+```{r, message = FALSE, warning = FALSE}
+library(here)
+library(tidyverse)
+library(lubridate)
+```
+
+
+# FamiLinx
+
+```{r}
+links <- readRDS(here::here("Data","FamiLinx","links_de.RDS"))
+prof <- readRDS(here::here("Data","FamiLinx","prof_de.RDS"))
+# glimpse(prof)
+```
+
+# get decimal event dates.
+The dated events for each life in these data include birth, baptism, death, and burial. Notice that each event date is currently represented with multiple columns, pertinently one each for year, month, and day of the event. These ought to all be integers, but they are not. Let's convert them before going further.
+
+This sort of thing can be done even more laboriously, we can show some more.
+```{r}
+prof <- prof %>% 
+  mutate_at(grep(colnames(.),pattern = "_day", value = TRUE), as.integer) %>% 
+  mutate_at(grep(colnames(.),pattern = "_month", value = TRUE), as.integer)
+```
+
+These will be messy data, let's have a look:
+```{r}
+prof %>% pull(death_day) %>% table()
+```
+There are some days greater than 31?
+```{r}
+prof %>% pull(death_month) %>% table()
+```
+And some months greater than 12?
+```{r, eval = FALSE}
+prof %>% pull(death_year) %>% table()
+```
+And the years are just a mystery to me because they're all technicall plausible. We could see similar odd thing by looking at birth dates. We can see this will be messy. There are apparently cases where year, month, and day were incorrectly parsed, probably because they came from heterogeneous string representations in the first place. If it's a matter of ordering YMD ordering, we can probably detect this systematically. There will most certainly be pathological cases, for example with four digit years in both the day and month positions, pairs with missing year registration! 
+
+Administrative data can also be messy, but not this kind of messy. Here if the goal is to recuperate all the valid but incorrectly recorded cases (YMD order switching) we'll need to be creative in our coding. Let's be pragmatic for the time being, and only preserve rows in this data where birth dates and death dates appear to be correct. 
+
+Time out to brainstorm:
+
+- Given the nature of these data, what might we do to infer erroneous dates?
+
+Now back to being pragmatic. Let's make a function that does a logical check for the proper range of days and months, and we'll also use it to filter births and deaths after the year 1500. We can keep people that are still alive, why not?
+
+```{r}
+keep_date <- function(day, month, year){
+  !is.na(day) & !is.na(month) & !is.na(year) &
+    day > 0 & day <= 31 &
+    month > 0 & month <= 12 &
+    year > 1500 & year < 2020
+}
+# for example
+keep_date(1,12,2000)
+keep_date(2000, 12, 1)
+keep_date(1,NA,2000)
+```
+
+You could use this function inside a `mutate()` call to add an indicator column, or you could use it inside a `filter()` call to simply cut down rows to valid cases. Let's do this in two steps so we know what fraction of cases we preserve.
+
+```{r}
+prof <- prof %>% 
+  mutate(birth_valid = keep_date(birth_day, birth_month, birth_year),
+         death_valid = is_alive == 1 | keep_date(death_day, death_month, death_year) ) 
+
+prof %>% summarize(bv = mean(birth_valid),
+                   dv = mean(death_valid),
+                   v = mean(birth_valid & death_valid))
+```
+
+Wow, a large fraction of cases don't meet these simple criteria! It would most certainly be worth our time to fix as many dates as possible, but we'll save it for exercises. For now, let's cut down to just the valid cases and see how one might calculate single age exposure for lifetables. Then we'll fgure out how to get parental ages for fertility exposure. For this we want decimal dates. The `DemoTools` package has a function that takes day, month, and year integers and coverts them to a decimal date. But we already have the `lubridate` package loaded, so we'll do it that way.
+
+```{r}
+convert_date <- function(day, month, year){
+  paste(year, month,day,sep="-") %>% 
+    ymd() %>% 
+    decimal_date()
+}
+convert_date(1,1,2001)   # exactly 0
+convert_date(1,7,2001)   # about .5
+convert_date(31,12,2001) # almost 1
+```
+
+And now we can use it in a pipeline, test run:
+```{r, eval = FALSE}
+prof %>% 
+  filter(birth_valid & death_valid) %>% 
+  mutate(death_dec = ifelse(is_alive == 0, convert_date(death_day, death_month, death_year),NA),
+         birth_dec = convert_date(birth_day, birth_month, birth_year),
+         lifespan = death_dec - birth_dec) %>% 
+  filter(is.na(birth_dec)) %>% 
+  select(is_alive, birth_valid, birth_dec, birth_day, birth_month, birth_year, death_year)
+```
+
+Wow, there are lots of cases of day falling with [1,31) but not in the valid range of the month. And here one would need to account for leap years. In all cases, the recorded day exceeds the number of days in the month, so let's truncate these to the actual last day of the month. In terms of annualized exposure, this will have trivial impact, and clearly these cases shouldn't be outright discarded. Here's a helper function, making use of `lubridate`'s `days_in_month()` function. If the day is out of range, we truncate, and if it's in range we return it back.
+
+```{r}
+fix_day <- function(day, month, year){
+  max_days <- paste(year, month, "1", sep ="-") %>% 
+    ymd() %>% 
+    days_in_month()
+  ifelse( day > max_days, max_days, day)
+}
+fix_day(31,2,2001)
+fix_day(31,2,2000)
+```
+
+```{r}
+prof <- prof %>% 
+  filter(birth_valid & death_valid) %>% 
+  mutate(birth_day = fix_day(birth_day, birth_month, birth_year),
+         death_day = ifelse(is_alive == 0, fix_day(death_day, death_month, death_year), NA),
+         birth_dec = convert_date(birth_day, birth_month, birth_year),
+         death_dec = ifelse(is_alive == 0, convert_date(death_day, death_month, death_year),NA),
+         lifespan = ifelse(is_alive == 0, death_dec - birth_dec, 2020 - birth_dec) ) %>% 
+  filter(lifespan > 0,
+         lifespan < 101)
+# we still lose some cases in the coversion of death_day somehow.
+```
+
+There are a few different ways to calculate exposure here, all involving iteration as far as I can tell. You can iterate over combinations of age and period or age and cohort, asking for each cell how many cases. We could also iterate over individuals, asking for each which ages they pass through and adding a year into each time cell along the way, and accounting for the decimal fraction in the last year of life. We could also just tabulate age and period of death, and then use arithmetic to accumulate these deaths backwards within cohorts. In principle, this last one is the one that lets us be the laziest, and we always choose the laziest path you can think of. For this to work with adequate rigor, we need to split `lifespan` into two parts, the integer fraction below the completed decimal lifespan, and then the final fractional year at the end. We tabulate on the first of these, and then use the little fractions to adjust afterwards.
+
+```{r}
+prof <- prof %>% 
+  mutate(completed_age_at_death = floor(lifespan),
+         final_fraction = lifespan - completed_age_at_death,
+         period = ifelse(is_alive == 0, death_year, 2020),
+         cohort = floor(birth_year))
+#glimpse(prof)
+```
+Tabulation is two steps: 1) declare groups, 2) count cases inside groups using `n()` inside `summarize()`.
+```{r}
+APC <-
+  prof %>% 
+  group_by(completed_age_at_death,
+           period,
+           cohort) %>% 
+  summarize(deaths = n()/.5,
+            dfrac = sum(final_fraction))
+```
+
+Now we have deaths tabulated, but to get exposures, it will help to impute 0s so that we don't have gaps in the data.
+
+```{r}
+
+APCgrid <- expand.grid(completed_age_at_death = 0:100,
+            period = 1500:2019,
+            cohort = 1500:2019) %>% 
+  filter(period >= cohort)
+```
+
+
+
+
+
+
+
+
+
+
+
+# References
