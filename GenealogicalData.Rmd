@@ -39,6 +39,7 @@ prof <- prof %>%
   mutate_at(grep(colnames(.),pattern = "_month", value = TRUE), as.integer)
 ```
 
+## examine date columns
 These will be messy data, let's have a look:
 ```{r}
 prof %>% pull(death_day) %>% table()
@@ -59,6 +60,7 @@ Time out to brainstorm:
 
 - Given the nature of these data, what might we do to infer erroneous dates?
 
+## validate date information
 Now back to being pragmatic. Let's make a function that does a logical check for the proper range of days and months, and we'll also use it to filter births and deaths after the year 1500. We can keep people that are still alive, why not?
 
 ```{r}
@@ -99,6 +101,7 @@ convert_date(1,7,2001)   # about .5
 convert_date(31,12,2001) # almost 1
 ```
 
+## test date conversion
 And now we can use it in a pipeline, test run:
 ```{r, eval = FALSE}
 prof %>% 
@@ -110,7 +113,8 @@ prof %>%
   select(is_alive, birth_valid, birth_dec, birth_day, birth_month, birth_year, death_year)
 ```
 
-Wow, there are lots of cases of day falling with [1,31) but not in the valid range of the month. And here one would need to account for leap years. In all cases, the recorded day exceeds the number of days in the month, so let's truncate these to the actual last day of the month. In terms of annualized exposure, this will have trivial impact, and clearly these cases shouldn't be outright discarded. Here's a helper function, making use of `lubridate`'s `days_in_month()` function. If the day is out of range, we truncate, and if it's in range we return it back.
+## fix recorded day
+Wow, there are lots of cases of day falling in [1,31) but not in the valid range of the month. And here one would need to account for leap years. In all cases, the recorded day exceeds the number of days in the month, so let's truncate these to the actual last day of the month. In terms of annualized exposure, this will have trivial impact, and clearly these cases shouldn't be outright discarded. Here's a helper function, making use of `lubridate`'s `days_in_month()` function. If the day is out of range, we truncate, and if it's in range we return it back.
 
 ```{r}
 fix_day <- function(day, month, year){
@@ -122,6 +126,10 @@ fix_day <- function(day, month, year){
 fix_day(31,2,2001)
 fix_day(31,2,2000)
 ```
+
+## finally the date conversion!
+
+We'll create the new decimal date columns and generate some other variables while at it.
 
 ```{r}
 prof <- prof %>% 
@@ -136,6 +144,8 @@ prof <- prof %>%
 # we still lose some cases in the coversion of death_day somehow.
 ```
 
+# Calculate individual exposures for mortality
+
 There are a few different ways to calculate exposure here, all involving iteration as far as I can tell. You can iterate over combinations of age and period or age and cohort, asking for each cell how many cases. We could also iterate over individuals, asking for each which ages they pass through and adding a year into each time cell along the way, and accounting for the decimal fraction in the last year of life. We could also just tabulate age and period of death, and then use arithmetic to accumulate these deaths backwards within cohorts. In principle, this last one is the one that lets us be the laziest, and we always choose the laziest path you can think of. For this to work with adequate rigor, we need to split `lifespan` into two parts, the integer fraction below the completed decimal lifespan, and then the final fractional year at the end. We tabulate on the first of these, and then use the little fractions to adjust afterwards.
 
 ```{r}
@@ -146,6 +156,7 @@ prof <- prof %>%
          cohort = floor(birth_year))
 #glimpse(prof)
 ```
+## Tabulate deaths in Lexis triangles
 Tabulation is two steps: 1) declare groups, 2) count cases inside groups using `n()` inside `summarize()`.
 ```{r}
 APC <-
@@ -157,6 +168,7 @@ APC <-
             dfrac = sum(final_fraction))
 ```
 
+## impute empty cells with 0s using join operation
 Now we have deaths tabulated, but to get exposures, it will help to impute 0s so that we don't have gaps in the data.
 
 ```{r}
