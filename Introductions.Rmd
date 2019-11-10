@@ -19,7 +19,7 @@ header-includes:
 - \usepackage{titling}
 - \pretitle{\begin{center}\includegraphics[trim=0 0 0 8cm, width=6cm, ]{assets/MPIDR_square_color.pdf}\\[\bigskipamount]}
 - \posttitle{\end{center}}
-bibliography: bibliography.bib
+bibliography: references.bib
 ---
 
 
@@ -30,22 +30,19 @@ bibliography: bibliography.bib
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
+# About me
+				
+Hi, I'm Tim Riffe, a US-American, [CED](https://ced.uab.cat/)-educated (Spain) demographer living in Germany and working at the [MPIDR](https://www.demogr.mpg.de/en/). I've been hooked on `R` since 2009 when I did [EDSD](https://www.eds-demography.org/), and have since authored several packages, mostly that do demographic things, but sometimes that do plotting things. My own research data preparation, analyses, analytic plotting, and presentation-quality plotting are all done in `R`. I've led introductory [workshops](https://github.com/timriffe/BSSD2019Module1), [university courses](https://github.com/timriffe/DemoED), and [bespoke modules](https://github.com/timriffe/RforUNPD2019) such as this one, but yours will be unique and much more focused in its content. My own focuses are in programming tools for demographers, formal demography, data visualization, and health demography. Although this module is not about any of those things I hope we get a chance to talk about your work and my work if you're interested.
+				
+# About this module
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+In the past `R` introductions such as this were done exclusively using the tools of so-called base-`R`, with the objective of putting new users on the path to programming. Nowadays it is becoming more common to teach intro to `R` from a data analyst perspective, namely to use the already-implemented tools and frameworks of `R` to just get things done efficiently without really needing to get into the nitty gritty of programming. Such courses tend to use the [tidyverse](https://www.tidyverse.org/) framework 
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+Your route to being an `R` data analyst/visualizer could be via Base programming, as it was for me, but it is a longer road than simply jumping into the `tidyverse`. I will try to give you introduction to both things.
 
-```{r cars}
-summary(cars)
-```
+So this is what we're going to do: Today we'll go through some very basic basics and then dip into the tidyverse approach, and then in following sessions we'll shift gears to base-`R` programming in order to introduce some concepts that will augment your abilities and ultimately your experience of `R`. These will most importantly include function-writing, loops, and conditional execution. New concepts will be introduced in an interactive type-along way. After a few examples of each new concept, I'll always try to loop back to the *tidy* approach, slipping in new tidy concepts. 
 
-## Including Plots
+This is an absolute intro course, I don't expect you'll have any experience with `R` or have even heard of these concepts. I do expect that you're familiar with other statistical packages or programming languages at an advanced level, so I'll try to use analogies where possible. I expect you'll be able to keep up if you type along and take notes as we go, and if you ask questions and tell me to stop, slow down, or repeat when needed. Real learning will happen when you try to apply these concepts on your own, and for this reason I'll give afternoon exercises, which we'll then solve together. Often I will set myself up for apparent failure by not having worked through a solution in advance, and you'll see me induce errors and use help resources in a natural way. It's important to see this messy side of programming so that you also learn to make natural use of such resources.
 
-You can also embed plots, for example:
 
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+# `R` basics
