@@ -4,11 +4,11 @@ title: |
   | Data Wrangling for EDSDers
   | \vspace{1.5cm} \LARGE\emph{Module outline}
 author: |
-  | United Nations Population Division
+  | Centre d'Esudis Demografics
   | 11-14 Nov, 2019
   | Tim Riffe
   | Max-Planck-Institute for Demographic Research
-date: "11 August, 2019"
+date: "11 Nov, 2019"
 output:
   html_document:
     number_sections: yes
