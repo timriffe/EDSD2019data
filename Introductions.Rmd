@@ -36,13 +36,384 @@ Hi, I'm Tim Riffe, a US-American, [CED](https://ced.uab.cat/)-educated (Spain) d
 				
 # About this module
 
-In the past `R` introductions such as this were done exclusively using the tools of so-called base-`R`, with the objective of putting new users on the path to programming. Nowadays it is becoming more common to teach intro to `R` from a data analyst perspective, namely to use the already-implemented tools and frameworks of `R` to just get things done efficiently without really needing to get into the nitty gritty of programming. Such courses tend to use the [tidyverse](https://www.tidyverse.org/) framework 
+The route to being an `R` data analyst could be via Base programming, as it was for me, but it is a longer road than simply jumping into the `tidyverse`. In this module we will use the [tidyverse](https://www.tidyverse.org/) framework to work with data. However, we'll also make use of function programming, and we'll blend the two things. Such code tends to be nicely legible, and in some ways it is easier to fix and change code. For a few different reasons, we'll be mostly working with R markdown and not in R scripts (although we could). The way to follow along in this course is to get set up correctly and to type along.
 
-Your route to being an `R` data analyst/visualizer could be via Base programming, as it was for me, but it is a longer road than simply jumping into the `tidyverse`. I will try to give you introduction to both things.
+All I know is that you've had Christian's intro course, and I assume no more than that. Where necessary I will review concepts.  I expect you'll be able to keep up if you type along and take notes as we go, and if you ask questions and tell me to stop, slow down, or repeat when needed. Real learning will happen when you try to apply these concepts on your own, and for this reason I'll give exercises, which we'll then solve together. Often I will set myself up for apparent failure by not having worked through a solution in advance, and you'll see me induce errors and use help resources in a natural way. It's important to see this messy side of programming so that you also learn to make natural use of such resources and to react intelligently to error messages. 
 
-So this is what we're going to do: Today we'll go through some very basic basics and then dip into the tidyverse approach, and then in following sessions we'll shift gears to base-`R` programming in order to introduce some concepts that will augment your abilities and ultimately your experience of `R`. These will most importantly include function-writing, loops, and conditional execution. New concepts will be introduced in an interactive type-along way. After a few examples of each new concept, I'll always try to loop back to the *tidy* approach, slipping in new tidy concepts. 
+This module consists in a bunch of worked examples, hopefully different enough from one anothert that by the end you will have mastered the basics, seen a good variety of functionality, and be able to extend your capabilities all by yourself. If you internalize this last bit then you can consider yourself empowered. We'll mostly be using `dplyr` to data wrangle, however any tool that can do the job is in-universe, so we'll see what happens.
 
-This is an absolute intro course, I don't expect you'll have any experience with `R` or have even heard of these concepts. I do expect that you're familiar with other statistical packages or programming languages at an advanced level, so I'll try to use analogies where possible. I expect you'll be able to keep up if you type along and take notes as we go, and if you ask questions and tell me to stop, slow down, or repeat when needed. Real learning will happen when you try to apply these concepts on your own, and for this reason I'll give afternoon exercises, which we'll then solve together. Often I will set myself up for apparent failure by not having worked through a solution in advance, and you'll see me induce errors and use help resources in a natural way. It's important to see this messy side of programming so that you also learn to make natural use of such resources.
+# R markdown basics
+
+Class will happen in R markdown. Indeed, this material was produced in markdown. I'll say why in class and then fill this in.
 
 
-# `R` basics
+# tidy data
+
+*Tidy* data refers to tables of a particular layout, with one observation per row and one variable per column. Tidy datasets processed using tidyverse tools allow for fast and understandable analyses that in many cases require no programming, whereas it often takes a certain amount of head-scratching (programming) to analyze not-tidy datasets. 
+
+## Example of tidy data
+
+For example, you're probably all familiar with HMD lifetables [@HMD]: This data is tidy. If you were to take all the HMD single age lifetables and stack them, adding new grouping columns for Sex and Country, then this would still be tidy. That is, a single HMD observation consists in a unique combination of Country, Sex, Year, and Age. Each lifetable column is a variable, so the tidy way to store them is the traditional way: in columns. 
+
+## Examples of not tidy data.
+
+1. The UN's DemoData database is not tidy: it's much longer than tidy data. All variables are stacked, and the variable type (qx, lx, counts, etc) is coded in an additional grouping column. This is efficient for storage, given that not every observation has every variable. It is not efficient for interactive programming because observations are potentially scattered over rows.
+
+2. A matrix with ages in rows and years in columns can be very convenient for traditional programming, but it does not follow our definition of tidy. To make it tidy, we would need columns for age and year, and a new column containing the variable stored in the matrix.
+
+3. Often panel data is delivered with each row representing an individual, and with many many variables. If there are 100 variables, and 10 waves, we end up with 1000 or so columns. For many analyses this is not considered tidy: an observation is a unique combination of individual and wave. To make it tidy, we'd need a column to store the wave variable.
+
+Different data structures exist for various reasons, but in the end tidy data facilitates the kind of thinking and operations needed for a particular system of flexible data analysis and visualization. The big question you need to answer is *what is an observation*, and this is determined by the target analysis.
+
+## the gapminder `data.frame`
+
+Let's work with a tidy `data.frame`. These are like a rectangular spreadsheet, or like a dataset in `Stata`: `data.frame`s have rows and columns, and there can be different kinds of data between columns, but only one kind of data within a column. Load it along with `tidyverse` in case you didn't before:
+
+```{r}
+library(gapminder)
+library(tidyverse)
+```
+
+Or you could get metadata about the object from `str()` (structure), or `glimpse()` from the tidyverse. This tells us that we have 1704 observations (rows) of 6 variables, and then it tells us the variable (column) names, what kind of data it is (`Factor` = categorical, `int` = integer, `num` = numeric), and a sample of the first few observations in each.
+
+```{r}
+str(gapminder)
+```
+
+## Basic `ggplot2` with the gapminder data
+
+This course isn't about `ggplot2`, but we'll use it from time to time, and so an explicit section on this will make this less mysterious.
+
+### Overview
+
+Tidy datasets such as this can also be visualized without further ado using a systematic grammar [@wilkinson2012grammar] implemented in the `ggplot2` package ( @wickham2016ggplot2, this loads automatically with `tidyverse`). The `gapminder` examples I'll give today and tomorrow are either gratuitously lifted or modified from @healy2018data, which you can either purchase as the book (I'll show it to you), or refer to the free version online: [www.socviz.co](www.socviz.co). It's a fabulous book. 
+
+NOTE: when following along in these examples, you should **type along**, and not copy-paste the code.
+
+Let's take a first look:
+
+### *Map* to aesthetics
+
+```{r}
+ggplot(gapminder, mapping = aes(x = gdpPercap, y = lifeExp, color = continent)) + 
+	geom_point() 
+```
+
+The `ggplot()` function *maps* variables in the `gapminder` dataset to either coordinates (x,y) or aesthetics (for example color). This sets up the plot metadata, but it does not plot the data because we didn't tell it how to do so: this final step is done by adding a point geometry `geom_point()`. 
+
+Notes: The first argument specifies the dataset. The `mapping` argument is specified always as `mapping = aes()`, where *aes* stands for aesthetics. At a minimum you'll want to map to `x`, but in this case also `y` and `color`. The things that you can map are variables in the tidy dataset. And where necessary `ggplot2` guesses whether they are quantitative or categorical in nature. You need to give a mapping to `ggplot()`, but you can also give different mappings for different geoms specified directly in the `geom` functions. That only makes sense if you'll have more than one `geom` going into the plot (we'll see this). Further modifications to the coordinate base created by `ggplot()` are *added* in to the expression with `+`.
+
+### Adjust axis scales
+
+```{r}
+library(scales)
+ggplot(gapminder, mapping = aes(x = gdpPercap, y = lifeExp, color = continent)) + 
+	geom_point() +
+	scale_x_log10(labels = dollar)
+```
+
+It turns out that by specifying a nice large set of possible mappings, coordinate systems, geoms, and discrete and continous options for scaling mappings, that you can create just about any plot. For other tricky ones, there are usually packages available. Here's a nice overview of `ggplot2` functionality: [https://www.rstudio.com/wp-content/uploads/2015/03/ggplot2-cheatsheet.pdf](https://www.rstudio.com/wp-content/uploads/2015/03/ggplot2-cheatsheet.pdf)
+
+### `geom`s and `facet`s
+
+My objective now is to show you a few different geoms and ways of doing panels in `ggplot2`. 
+
+For example, we can also add in a smoother to see the global trend:
+
+```{r}
+ggplot(gapminder, mapping = aes(x = gdpPercap, y = lifeExp)) + 
+	geom_point(mapping = aes(color = continent)) +
+	geom_smooth(method = "loess") +
+	scale_x_log10(labels = dollar)
+```
+
+See how geoms can also have their own special mapping? Had we left color in the first mapping, then everything that follows would have been split on continent. See:
+
+```{r}
+ggplot(gapminder, mapping = aes(x = gdpPercap, y = lifeExp, color = continent)) + 
+	geom_point() +
+	geom_smooth(method = "loess") +
+	scale_x_log10(labels = dollar)
+```
+
+Wow, that's a noisy plot! What if instead of color we just split it into subplots by continent?
+
+```{r}
+ggplot(gapminder, mapping = aes(x = gdpPercap, y = lifeExp)) + 
+	geom_point() +
+	geom_smooth(method = "loess") +
+	scale_x_log10(labels = dollar) + 
+	facet_wrap(~continent)
+```
+
+We get panel plots like this by specifying a layout formula in `facet_wrap()`, where `~` separates left and right sides of the formula, and where left means rows in a panel layout and right means columns. Since there's nothing on the left it just orders the continents. Color is no longer needed since the groups are separated.
+
+There is a time variable in this dataset that we've basically been ignoring. How about a `gdpPercap` time series?
+
+Too busy?
+
+```{r}
+ggplot(gapminder, mapping = aes(x = year, y = gdpPercap, by = country)) +
+	geom_line() 
+```
+
+Use faceting to separate the continents
+
+```{r}
+ggplot(gapminder, mapping = aes(x = year, y = gdpPercap, by = country)) +
+	geom_line() +
+	facet_wrap(~continent)
+```
+
+### Summary lessons 
+More sophisticated usage of `ggplot2` builds on these basics in a rather consistent way. You can deepen your fluency by learning new `geoms`, learning what things can be *mapped* to aesthetics, and learning options to scale axes and mappings. To get an overview, refer to the `ggplot2` cheat sheet. For a very approachable introduction, try the Healy book. For the most thorough and advanced treatment, refer to the Wickham book. To learn usage, look at help examples, or R graph gallery examples (add links). In following lessons I will sometimes use `ggplot2`, and I will slip in further tips in an unstructured way.
+
+
+# Basic `dplyr`
+`ggplot2` is a wonderful tool if your data is already both *tidy* and *mappable*. But source data rarely is. To feed a dataset to `ggplot2` often we'll want to pre-process data, or even model it. The tools for data management, shaping, matching, sorting, joining, filtering, and so forth (stuff to prep for `ggplot2`) blend seamlessly into the tools of data analysis and modeling when one uses the `dplyr` approach. Some basic concepts will help us get started:
+
+1. `dplyr` functions are *verbal* because they *do* things to data.
+2. A bunch of `dplyr` functions executed in sequence on a dataset for a *pipeline*.
+3. Data processing pipelines read as sentences, because verbs are strung together using pipes. This is the pipe symbol: `%>%`
+4. Data processing pipelines are quick to build, easy to read, and help keep your `R` workspace less cluttered than most alternatives. Clean coding and clean workspaces means code is easier to maintain, even when not written by yourself!
+
+This probably sounds jargony, so let's hop to it:
+
+## Verbs {.tabset}
+### Overview
+Here are a selection of `dplyr` verbs. Some things to note: the first argument of each is a data object, usually something like a `data.frame`. These do things to the dataset, and they return the dataset back.
+
+1. `group_by()` allows operations on subgroups
+2. `gather()` make a wide range of columns tidy
+3. `mutate()` make new columns using other columns, no loss of rows
+4. `summarize()` aggregates over rows. Usually reduces nr of rows
+5. `select()` selects columns
+6. `filter()` selects rows (subsets)
+7. `ungroup()` removes the former
+
+We'll see other `dplyr` verbs here and there during this workshop.
+
+Flip through the tabs in order.
+
+#### `group_by()` 
+When you want to operate on groups in a dataset, then it is necessary to declare the grouping.
+
+```{r}
+gap_grouped    <- group_by(gapminder, country, year, continent) 
+head(gap_grouped)
+```
+
+Grouping does not do anything to the data directly. All values will be identical, and the dimensions are the same. It just adds a piece of metadata to the object that declares the grouping.
+
+NB: the object created here is used in the following code chunk.
+
+#### `gather()`
+
+NOTE: Recently `pivot_longer()` and `pivot_wider()` are said to be better and more intuitive than `gather()` and `spread()`, so you can watch me figure them out live!
+
+Here we use `gather()` to pull all the gapminder value columns into a single key-value pair, where the key is the variable column name, and value is the contents. The resulting `data.frame` is three times longer because there are three variable columns (and three key columns), and this mimics the setup of your own `DemoData` SQL database.
+
+```{r, message = FALSE, warning = FALSE}
+gapminder_long <- gather(gap_grouped, 
+						 key="varname", 
+						 value = "value", 
+						 lifeExp:gdpPercap) 
+```
+
+Note: `group_by()` is a necessary pre-step in order to maintain the unique key combinations. We could consider `continent` either a key or a variable. It's not strictly needed as a key because country-year uniquely identifies observations, but I left it there to not over-lengthen the dataset.
+
+You can get back to the original format with the `spread()`, which is the opposite of `gather()`.
+
+```{r, eval = FALSE}
+spread(gapminder_long, varname, value)
+```
+
+#### `mutate()` 
+`mutate()` adds columns to, or modifies columns in, a `data.frame`. Think of the example of lifetable construction: You might start with deaths and exposures, and all other columns are created based on these. This is a case for `mutate()`. The main thing to remember is that `mutate()` does not change the number of rows. Keeping with our gapminder example, say we want to add a column for the mean life expectancy, but repeated for each row within each group. To get these means for each country, we'll want to group by country first (our previous grouping also grouped by year).
+
+```{r}
+gap_grouped <- group_by(gapminder, country)
+gap_mutated <- mutate(gap_grouped,
+	   mean_lifeExp = mean(lifeExp)) 
+head(gap_mutated)
+```
+
+You can also just keep comma separating newly made columns, like so:
+
+```{r, eval = FALSE}
+mutate(gap_grouped,
+	   mean_lifeExp = mean(lifeExp),
+	   sd_lifeExp = sd(lifeExp),
+	   cov_lifeExp = sd_lifeExp / mean_lifeExp,
+	   cov_pop = sd(population) / mean(population)) 
+```
+
+You see how `cov_lifeExp` is created using columns being created within the same call? Pretty neat! Expressions can also be more complicated, see where `cov_pop` is created using two function calls.
+
+NB: The object `gap_grouped` created here is also used in the next code chunk.
+
+#### `summarize()`
+
+If instead we wished to collapse the dataset to have one observation per country, then we use `summarize()` (this can also by lossy with respect to columns). Here is that first `mutate` expression when executed with `summarize()`:
+
+```{r}
+gap_summarize <- summarize(gap_grouped,
+	   mean_lifeExp = mean(lifeExp))
+head(gap_summarize)
+dim(gap_summarize) # collapsed
+```
+
+If you want to summarize more than one column, then this works, also with sequential dependency over columns created on the fly:
+
+```{r}
+gap_summarize <- summarize(gap_grouped,
+	   mean_lifeExp = mean(lifeExp),
+	   mean_gdpPercap = mean(gdpPercap),
+	   sd_gdpPercap = sd(gdpPercap),
+	   cov_gdpPercap = sd_gdpPercap / mean_gdpPercap)
+head(gap_summarize)
+```
+
+You can get a lot of mileage out of `group_by()`, `mutate()` and `summarize()`.
+
+#### `select()` 
+`select()` picks out columns:
+
+```{r}
+head(select(gapminder, country, gdpPercap))
+```
+
+If data are grouped, the key columns are retained (and it tells you so in the console):
+
+```{r}
+gap_grouped <- group_by(gapminder, country, year)
+head(select(gap_grouped, gdpPercap))
+```
+
+#### `filter()` 
+
+More often we want to subset rows to those that satisfy certain selection criteria. Use `filter()` for this:
+
+```{r}
+gap_filtered <- filter(gapminder,
+					   year >= 2000,
+					   year <= 2010,
+					   continent == "Africa")
+str(gap_filtered)
+```
+
+There are three logical expressions here, each producing a value of TRUE or FALSE for each row. Comma separation between these is interpreted as `&`, so the full logical expression evaluated is interpreted as: 
+`year >= 2000 & year <= 2010 & continent == "Africa"`
+Note that double equals `==` is for the logical evaluation of equality! The other logical operators are pretty straightforward. A vertical bar `|` is used for *or*.
+
+#### `ungroup()` 
+
+It is often a good idea to remove a grouping attribute from a data object when you're done using it. Otherwise you might operate within groups when you don't mean to. Then execute `ungroup()` on the object. This is also a clean way to remove a grouping before declaring a new and different one. For example, say we want to make a column for the mean `lifeExp` within the series for each country, and also the mean over countries within each year. Then we'll need to switch groupings:
+
+```{r}
+gap_gr1 <- group_by(gapminder, country)
+gap_gr1 <- mutate(gap_gr1,
+				  mean_lifeExp_country = mean(lifeExp))
+# now undo to operate on a different group
+gap_gr2 <- ungroup(gap_gr1)
+gap_gr2 <- group_by(gap_gr2, year)
+gap_gr2 <- mutate(gap_gr2, mean_lifeExp_year = mean(lifeExp))
+head(gap_gr2)
+```
+
+### Pipes
+
+I had to force myself not to use pipes in the previous section! Really `dplyr` functions can be executed in sequence without the need to create intermediate objects. If you executed the previous examples, look at how cluttered RStudio's environment tab has become. We can avoid all that by stringing things together using the pipe operator from the `magrittr` package that loads automatically with `tidyverse`. here are some of those example reworked. See how they read as sentences?
+
+Before:
+
+```{r, eval = FALSE}
+gap_grouped <- group_by(gapminder, country)
+gap_mutated <- mutate(gap_grouped,
+	   mean_lifeExp = mean(lifeExp)) 
+head(gap_mutated)
+```
+
+After:
+
+```{r, eval = FALSE}
+gapminder %>% 
+	group_by(country) %>% 
+	mutate(mean_lifeExp = mean(lifeExp)) %>% 
+	head()
+```
+
+Note: the first argument (`data`) is automatically filled with the object running through the pipeline. You should imagine `gapminder` running through a staged pipeline, getting modified at each step. When it gets to the end we just show the first several rows in the console.
+
+Before:
+
+```{r, eval = FALSE}
+gap_gr1 <- group_by(gapminder, country)
+gap_gr1 <- mutate(gap_gr1,
+				  mean_lifeExp_country = mean(lifeExp))
+# now undo to operate on a different group
+gap_gr2 <- ungroup(gap_gr1)
+gap_gr2 <- group_by(gap_gr2, year)
+gap_gr2 <- mutate(gap_gr2, mean_lifeExp_year = mean(lifeExp))
+head(gap_gr2)
+```
+
+After:
+
+```{r, eval = FALSE}
+gapminder %>% 
+	group_by(country) %>% 
+    mutate(mean_lifeExp_country = mean(lifeExp)) %>% 
+	ungroup() %>% 
+    group_by(year) %>% 
+    mutate(mean_lifeExp_year = mean(lifeExp)) %>% 
+	head()
+```
+
+Instead of ending in `head()`, we could assign the result to a new object. This is usually done at the start, like so:
+
+```{r, eval = FALSE}
+gap_mutated <- 
+	gapminder %>% 
+	group_by(country) %>% 
+    mutate(mean_lifeExp_country = mean(lifeExp)) %>% 
+	ungroup() %>% 
+    group_by(year) %>% 
+    mutate(mean_lifeExp_year = mean(lifeExp)) 
+```
+
+The object `gap_mutated` consists in the fully-executed pipeline. 
+
+Note: We usually construct pipelines like these incrementally, often checking as we to make sure things work as expected. Often that checking is done like we saw above, with ` %>% head()` or similar as the last step. As we determine next steps, this checker line gets pushed further down in the chain of execution. Just remember to remove it when you're done building the pipeline! Another great tool is the new `ViewPipeSteps` addin, which opens up a tab for each step in a pipeline! You need to install it from github like so:
+
+```{r, eval = FALSE}
+devtools::install_github("daranzolin/ViewPipeSteps")
+```
+
+Select this text, then from the addins pulldown, select `View Pipe Chain Steps`
+```{r}
+library(ViewPipeSteps)
+gapminder %>% 
+	group_by(country) %>% 
+    mutate(mean_lifeExp_country = mean(lifeExp)) %>% 
+	ungroup() %>% 
+    group_by(year) %>% 
+    mutate(mean_lifeExp_year = mean(lifeExp)) 
+```
+
+Note also: We use indentation and alignment to make the code more legible.
+
+As mentioned, `dplyr` pipelines also read as sentences. This last one can be verbalized as "first take the gapminder dataset, then group it by country, then make a new column for the average life expectancy over time within the country, then regroup by year and make a new column for the average life expectancy over countries within the year". Such sentences don't make for good lit but they do make your code accessible to readers, which is a major advantage. You can (should) also comment as you go.
+
+Legibility of a script is achieved by reducing clutter and by using succinct pipelines. This is important because your processing/analysis code becomes all the more shareable, both with others and with future you. Who hasn't looked back at your own code written years ago and wonders what the heck it does? It feels awful to have to reverse engineer your own logic and coding. Yes, it can be overcome with good annotations, but let's obviate the need altogether if we can.
+
+As mentioned, I'll slip in pipelines and `ggplot2` here and there in the coming days, so there will be several opportunities for practice and repetition.
+
+# Exercises
+
+We're going to wrangle a UN-compiled spreadsheet with tons of fertility data. We can get it here. This will require some filtering to get the valid subsets, a reshape operation, and then let's try to graduate these rates to single ages using Schmertmann's method, which I can give you code for.
+[http://data.un.org/DocumentData.aspx?id=319](http://data.un.org/DocumentData.aspx?id=319)
+
+
+
+
