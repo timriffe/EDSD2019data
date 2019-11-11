@@ -8,7 +8,7 @@ author: |
   | 11-14 Nov, 2019
   | Tim Riffe
   | Max-Planck-Institute for Demographic Research
-date: "12 August, 2019"
+date: "12 Nov, 2019"
 output:
   html_document:
     number_sections: yes
@@ -32,6 +32,20 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Introduction
 
-We're talking about big birth, death, and marriage flat files, as commonly produced by Spain, USA, Mexico, and others. Anyone know of other countries that openly share data in this form?
+We're talking about big birth, death, and marriage flat files, as commonly produced by Spain, USA, Mexico, and others. Anyone know of other countries that openly share data in this form? Let's compile a list of the ones we know about and add links here. The tools we use today could be useful for any of them.
 
-To be continued
+1. USA [https://www.cdc.gov/nchs/data_access/vitalstatsonline.htm](https://www.cdc.gov/nchs/data_access/vitalstatsonline.htm)
+2. Spain [ine.es](https://ine.es/dyngs/INEbase/es/operacion.htm?c=Estadistica_C&cid=1254736177008&menu=resultados&secc=1254736195450&idp=1254735573002) This link for mortality, but there are other pages for marriage, natality, and other things.
+3. ?
+
+Download the USA 2018 Natality file, and unzip it in the Data folder (around 5Gb). You can rezip it if you want as a `.gz` file or similar, if you want to have it take up less space. We'll just read in selected columns and then do fun things from there. This is really quite fast and easy to do using the `readr` package and browsing the data documetation.
+
+```{r}
+library(readr)
+NAT <- read_fwf(here::here("Data","Nat2018PublicUS.c20190509.r20190717.txt"), 
+               fwf_positions(c(9, 13, 19, 23, 75, 147), 
+                             c(12, 14, 22, 23, 76, 148), 
+                             c("year", "month", "time","weekday","mage","fage")))
+print(object.size(NAT),units ="Mb")
+```
+
