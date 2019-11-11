@@ -411,9 +411,169 @@ As mentioned, I'll slip in pipelines and `ggplot2` here and there in the coming 
 
 # Exercises
 
-We're going to wrangle a UN-compiled spreadsheet with tons of fertility data. We can get it here. This will require some filtering to get the valid subsets, a reshape operation, and then let's try to graduate these rates to single ages using Schmertmann's method, which I can give you code for.
+# A `dplyr` worked example
+
+Let's download this spreadsheet and figure out how to work with it! The exercise is to produce a [ridgeplot](https://www.google.com/search?q=ridgeplot&sxsrf=ACYBGNS1APa3kpQvaQUDckhfekTPMdzKjg:1573488533160&source=lnms&tbm=isch&sa=X&ved=0ahUKEwjj0c7IxeLlAhUKtRoKHauQDGcQ_AUIEigB&biw=1849&bih=932) where levels are TFR intervals, and two single age asfr distributions are shown, picked out as those that have the highest and lowest mean age at childbearing (MAB) respectively. Each code chunk is described right below it.
+
 [http://data.un.org/DocumentData.aspx?id=319](http://data.un.org/DocumentData.aspx?id=319)
 
+Download the spreadsheet and stick it in a new folder called `Data`. We're going to figure this thing out.
+
+```{r}
+library(readxl)
+library(readxl)
+ASFR <- read_excel(
+  "Data/Age-specific fertility rates, Total fertility and .xls", 
+    na = "..", 
+    skip = 4) %>% # Ctrl + Shift + m
+  select(1:13) %>% 
+  dplyr::rename("Country" = "...1", "ISO" = "...2",
+                     "PeriodVerbose" = "...3","TFR" = "...6",
+                     "15" = "15-19","20" = "20-24",
+                     "25" = "25-29","30" = "30-34",
+                     "35" = "35-39","40" = "40-44",
+                     "45" = "45-49")
+```
+
+Here we have a 3-step pipeline! Yay. The first step is syntax to read in from a spreadsheet, generated interactively using the import data feature of rstudio. Copy. Paste. Bam. Step 2 `select()`s just the columns we want for now. Step 3 `rename()`s the columns manually to something useful. The pipe operator `%>%` take the object coming out of the function on the left and feeds it to the function on the right (by default as its first argument). These steps can be strung together into so-called data processing *pipelines*. 
+
+Pipelines read like sentences. Because they are made of verbs and the pipe operator reads as *and then do this*.
+
+```{r}
+# here we're assigning at the top, but it's getting
+# what comes out the bottom
+ASFR <- ASFR %>% 
+  select(-c(PeriodVerbose, TFR, Period)) %>% 
+  pivot_longer(cols = `15`:`45`, 
+               names_to = "Age",
+               values_to = "asfr") %>% 
+  mutate(Age = as.integer(Age),
+         asfr = asfr / 1000) %>% 
+  group_by(Country, Year) %>% 
+  mutate(TFR = sum(asfr, na.rm = TRUE) * 5,
+         MAB = sum((5 * asfr) * (Age + 2.5), na.rm = TRUE) / TFR) %>%
+  ungroup() %>% 
+  filter(TFR > 0)  # ASFR up top gets what comes out here
+```
+
+The very first step could be written like this:
+```{r, eval = FALSE}
+  select(ASFR, -c(PeriodVerbose, TFR, Period))
+```
+
+What method do we use to split these data to single ages?
+
+Suggestions from the field:
+
+1. PCLM
+2. Sprague (or Beers, or Grabill, or ...)
+3. smooth spline through uniform repeated values in age groups (not constrained, but could work OK)
+4. monotonic spline through cumulative distribution
+5. use a fertility model, e.g. Coale-Trussel and pals
+6. Schmertmann [http://schmert.net/calibrated-spline/](http://schmert.net/calibrated-spline/) Super awesome love it
+
+We will try the monotonic spline method because it seems easier to write fresh.
+
+```{r}
+mono_graduate <- function(Age5, asfr5){
+  
+  # assume NAs are 0s, sometimes these are found 
+  # in the first or last age groups.
+  asfr5[is.na(asfr5)] <- 0
+  # anchor the endpoints (added double anchor)
+  Age5                <- c(13,14, Age5+4, 50,51)
+  asfr5               <- c(0,0, asfr5, 0,0)
+  # scale up asfr
+  asfr5               <- asfr5 * 5
+  # accumualte it
+  casfr5              <- cumsum(asfr5)
+  # start at 14 because we need firs differences
+  # to accumulate...
+  predict_ages        <- 14:49
+  # fit the spline
+  xy <- splinefun(x = Age5,
+            y = casfr5,
+            method = "monoH.FC")(predict_ages)
+  # return tibble
+  tibble(Age = 15:49, 
+         asfr = diff(xy))
+}
+chunk <- filter(ASFR, ISO == 4, Year == 1973)
+plot(mono_graduate(Age5 = chunk$Age,
+              asfr5 = chunk$asfr))
+```
+
+Great now we have a spline function, let's see if we can figure out how to use it in a pipeline.
+
+```{r, message=FALSE}
+ASFR <- ASFR %>% 
+ 	group_by(Country, ISO, Year) %>% 
+    do(data = mono_graduate(Age5 = .$Age, asfr5 = .$asfr)) %>% 
+ 	unnest(cols = c(data)) %>% 
+  group_by(Country, Year) %>%
+  mutate(TFR = sum(asfr),
+         MAB = sum(asfr * (Age+.5))/TFR)
+
+nrow(ASFR) # yup it's bigger now
+```
+
+Great, the trick is to be able to return data chunks in a new kind of column called a list column. Having a list column means you have nested data, however, we can get it back to flat tidy format by `unnest()`ing. Note that we lost TFR and MAB in this operation. A cheap way to keep them would have been to incldue them in the first `group_by()` statement, as I did for `ISO` (`ISO` and `Country` are redundant). Each subset now has single ages 15-49. We don't know yet whether there were any pathological cases. Let's make a scatterplot of MAB by TFR to find out.
+
+```{r}
+#install.packages("ggpointdensity")
+library(ggpointdensity)
+library(colorspace)
+ASFR %>% 
+  filter(Age == 30,
+         MAB > 20) %>% 
+  ggplot(mapping = aes(x = MAB, y = TFR)) +
+  geom_pointdensity() + 
+  scale_color_continuous_sequential(palette = "Reds")
+```
+
+Now we start with the exercise. We bin TFRs into some intervals, let's just say .25 or so. This can happen in a `mutate()` call, and we do it by subtracting the modulo using `%%` (super awesome operator). Next step is to group by `TFRint` and pick out the minumum and maximum MAB in each interval band.
+
+```{r}
+
+ASFRex <- ASFR %>% 
+  filter(MAB > 20) %>% 
+  mutate(TFRint = TFR - TFR %% .25) %>% 
+  group_by(TFRint) %>% 
+  mutate(extremes = case_when(
+                      MAB == max(MAB) ~ "max",
+                      MAB == min(MAB) ~ "min",
+                      TRUE ~ as.character(NA)
+  )) %>% 
+ filter(!is.na(extremes))
+```
+
+Now this is something we can plot! Let's use the `ggridges` package to bring in the ridgeplot geom.
+
+```{r, fig.height=15}
+#install.packages("ggridges")
+library(ggridges)
+
+ASFRex %>% 
+  filter(TFRint >= 1,
+         TFRint < 7.1) %>% 
+  ggplot(mapping = aes(x = Age, 
+                y = factor(TFRint, 
+ 						 		           levels = sort(unique(TFRint)), 
+ 						 		           ordered = TRUE))) + 
+ 	geom_ridgeline(mapping = aes(x = Age, 
+ 								               height = asfr, 
+ 								               fill = extremes),  
+ 	               scale = 4, 
+ 				         alpha = .6) +
+  labs(y = "TFR")
+
+```
+
+We start by filtering out some of the extreme TFRs, which have few observations. Then we pass the main data object into `ggplot()`, mapping `Age` to `x` and `y` to `TFRint`. In this case, `y` means the ridge level, not the shifted height of each curve. Note since we want TFR to increase on the `y` axis, we need to set it as an ordered factor. This is a common ggplot2 trick, so not bad to see it. To draw the curves, we use the `geom_ridgeline()` geom, giving a new mapping there. Within the geom, `x` is `Age`, and `y` is `asfr`, and we finally map fill color to the extremes variable. 
+
+Looking at the results, we note a few odd cases, which could be problematic spline fits, or poor data quality. If we wanted to pursue this any further then these would require closer examination. I'm afraid some of these series might have poor quality, or else data gaps that cause the splines to behave bad, not sure. We could also try the Schmertmann or some other method. Let's chalk this up as a win for now! 
+
+# References
 
 
 
