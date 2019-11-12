@@ -49,31 +49,39 @@ library(readr)
 
 Give `read_fwf()` a whirl. This worked on the first try after glancing at the options in the help file (type `?read_fwf` in the console).
 ```{r}
-NAT <- read_fwf(here::here("Data","Nat2018PublicUS.c20190509.r20190717.txt"), 
-               fwf_positions(c(9, 13, 19, 23, 75, 147), 
-                             c(12, 14, 22, 23, 76, 148), 
-                             c("year", "month", "time","weekday","mage","fage")))
-print(object.size(NAT),units ="Mb")
+pos <- fwf_positions(
+         start = c(9, 13, 19, 21, 23, 75, 147), 
+         end = c(12, 14, 20, 22, 23, 76, 148), 
+         col_names = c("year", "month", "hour","minute","weekday","mage","fage"))
+
+NAT <- read_fwf(
+  here::here("Data","Nat2018PublicUS.c20190509.r20190717.txt"), 
+  pos)
+print(object.size(NAT), units ="Mb")
+head(NAT)
 ```
 
 First let's fix the month and time variables, which parsed as character due to leading zeros. We can use `group_by()` and `summarize()` to tabulate as we please.
 ```{r}
-
 NAT <- 
   NAT %>% 
   mutate(month = as.integer(month),
-         time = as.integer(time))
+         hour = as.integer(hour),
+         minute = as.integer(minute))
 ```
 Check missing time: 316 cases
 ```{r}
 NAT %>% 
-  filter(time == 9999) %>% 
+  filter(minute == 99,
+         hour == 99) %>% 
   nrow()
 ```
 For the exercises I have in mind it's probably fine to throw these cases out if using the `time` variable as it's such a small fraction of births. But we could also redistribute them. In this case how? If we're lazy we might do so proportional to the distribution of births matched to all the characteristics they have in common. That means, of these 316 births, how many were in each month, with mothers and fathers of given ages, etc: Create a big multidimensional probability distribution for each combination of knowns for each birth. It's laborious, but also rather rigorous. Even more rigorous would be to include information on other variables you might not be interested in for the redistribution. @dudel2018estimating does something similar for missing ages of fathers. Before such an exercise we'd want to do a tabulation, which will make these data quite a bit lighter.
 
 ```{r}
-
+NAT %>% 
+  group_by(mage, hour, minute) %>% 
+  summarize(n = n())
 ```
 
 
