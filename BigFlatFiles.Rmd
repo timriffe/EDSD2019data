@@ -78,7 +78,8 @@ NAT %>%
          hour == 99) %>% 
   nrow()
 ```
-For the exercises I have in mind it's probably fine to throw these cases out if using the `time` variable as it's such a small fraction of births. But we could also redistribute them. In this case how? If we're lazy we might do so proportional to the distribution of births matched to all the characteristics they have in common. That means we could create a big multidimensional probability distribution for each combination of knowns for each birth with unknown time of day. It's laborious, but also semirigorous. Even more rigorous would be to include information on other variables you might not be interested in for the redistribution. But the more things you include in the redistribution the smaller the cells get, and it ends up being a bunch of noise. In that case, you might want to smooth the distribution used to redistribute unknowns, and doing so already puts things in a more statistical setting, where it's best to take advice from an actual statistician. For problems of this kind, and large count data like these, it's common to use one or two variables for such redistributions. @dudel2018estimating does something similar for missing ages of fathers (rescale by the distribution of known fathers age within each mother age). IMO this is better than imputing means. Before such an exercise we'd want to do a tabulation, which will make these data quite a bit lighter.
+For the exercises I have in mind it's probably fine to throw these cases out if using the `time` variable as it's such a small fraction of births. 
+But we could also redistribute them. In this case how? There are people who dedicate themselves to this question. If we're lazy we might do so proportional to the distribution of births matched to all the characteristics they have in common. That means we could create a big multidimensional probability distribution of time of day for the combination of knowns for each birth with unknown time of day. It's laborious, maybe also semirigorous. Even more rigorous would be to include information on other variables you might not be interested in for the redistribution. But the more things you include in the redistribution the smaller the cells get, and it ends up being a bunch of noise and 0s. In that case, you might want to smooth the distribution used to redistribute unknowns, and doing so already puts things in a more statistical setting, where it's best to take advice from an actual statistician. For problems of this kind, and large count data like these, it's common to use one or two variables for such redistributions. @dudel2018estimating does something similar for missing ages of fathers (rescale by the distribution of known fathers age within each mother age). IMO this is better than imputing means. Before such an exercise we'd want to do a tabulation, which will make these data quite a bit lighter.
 
 ```{r}
 NAT <- NAT %>% 
@@ -90,7 +91,8 @@ NAT <- NAT %>%
   mutate(dfrac = ifelse(minute == 99,              # condition
                         NA,                        # true
                         (hour * 60 + minute) / (24*60))) %>% # false
-  select(mage, n, dfrac) %>% 
+  # changed to retain hour and minute
+  select(mage, n, dfrac, hour, minute) %>% 
   # whatever we group by is what we redistribute within
   group_by(mage) %>% 
   # what is the fraction of births in each time-of-day within each mother age?
@@ -102,34 +104,72 @@ NAT <- NAT %>%
                      n[is.na(dfrac)])) %>%   # false
   ungroup() %>% 
   # now remove the NA times
-  filter(!is.na(dfrac)) %>% 
+  filter(!is.na(dfrac))# %>% 
+  # no need to recreate, could have retained them in the first place.
   # and get minute / hour back from the day fraction
-  mutate(minute = floor((dfrac * (60 * 24)) %% 60),
-         hour = floor((dfrac * (60 * 24)) - minute)) 
+  # mutate(minute = floor((dfrac * (60 * 24)) %% 60),
+  #        hour = floor((dfrac * (60 * 24)) - minute)) 
+
+# demonstration of why we need the second ifelse() statement
 # a <- c(1,4,56,6,76,5)
 # a[is.na(a)] * 1
 ```
 
-Now we've redistributed births of unknown time of day according to the distribution of known time of day within each mother age. The *within* part of this was dealt with by the `group_by(mage)` statement, where one could add another variable or two to make it finer. 
+Now we've redistributed births of unknown time of day according to the distribution of known time of day within each mother age. The *within* part of this was dealt with by the `group_by(mage)` statement, where one could add another variable or two to make it finer. However, already for mother age under ca 15 or over ca 35, we're not filling each minute of the day with observations. Were we to zoom in we might even observeminute heaping...
 
-```{r}
+```{r, warning = FALSE, message = FALSE}
 library(lubridate)
 library(colorspace)
 logit <- function(x){
   log(x/(1-x))
 }
 NAT %>% 
-  mutate(time = hm(paste(hour, minute,sep=":"))) %>% 
+  mutate(time = paste(hour, minute,sep=":"),
+         time = as.POSIXct(time, format = "%H:%M")) %>% 
   filter(mage >= 17,
          mage <= 35) %>% 
-  ggplot(mapping = aes(x = dfrac, y = mage, fill = logit(bfrac))) +
+  ggplot(mapping = aes(x = time, y = mage, fill = logit(bfrac))) +
   geom_tile() + 
   xlim(0,1) + 
-  scale_fill_continuous_sequential("Viridis")
-
-
+  scale_fill_continuous_sequential("Viridis") +
+  scale_x_datetime(date_breaks="2 hour", date_labels="%H:%M", expand = c(0,0))
 ```
 
+You'll note a two-step `mutate()` call that defines the `time` variable out of hours and minutes. In order to get `ggplot()` to render x axis as properly formatted hours, it's a good idea to convert our integer representation of hours and minutes into a real time class. Time classes are varied and tricky. From `ggplot()` warnings I learned the `POSIXct` format was needed, and a this StackOverflow answer gave me what I needed to fix it [https://learnr.wordpress.com/2010/02/25/ggplot2-plotting-dates-hours-and-minutes/](https://learnr.wordpress.com/2010/02/25/ggplot2-plotting-dates-hours-and-minutes/), so now the x axis looks good in the plot.
+
+We trucate `mage` in order to remove noise that might distort the pattern, but we could recover more of the surface if it were smoothed. We might be able to recover more definition in the time of day pattern if it were represented as lines. Let's see:
+
+```{r}
+library(ggridges)
+NAT %>% 
+  # first group to 10 min intervals, minute precision is the source
+  # of much of our noise problem
+  mutate(min10 = minute - minute %% 10) %>% 
+  group_by(mage, hour, min10) %>% 
+  summarize(bfrac = sum(bfrac)) %>% 
+  ungroup() %>% 
+  # now declare hourmin time variable
+  mutate(time = paste(hour, min10,sep=":"),
+         time = as.POSIXct(time, format = "%H:%M")) %>% 
+  # select age range of interest
+  filter(mage %% 5 == 0,
+         mage >= 20,
+         mage < 50) %>% 
+  # ridgeplot following form of previous lesson
+  ggplot(mapping = aes(x = time, 
+                       y = factor(mage, 
+                                  levels = sort(unique(mage)), 
+                                  ordered = TRUE))) +
+	geom_ridgeline(mapping = aes(x = time, 
+ 								               height = bfrac), 
+	               scale = 70,
+ 				         alpha = .6)+
+  scale_x_datetime(date_breaks="2 hour", date_labels="%H:%M", expand = c(0,0))
+       
+```
+OK, we could sense some of this variation in the surface plot, but here it's a but clearer I think: the 8:00 peak gets sharper as mother age increases, and the 13:00 also emerges with age.
+
+If you don't know what you want to do for your assignment, you might ask: how much of this pattern is due to cesarians? For that, just repeat the same thing twice and plot a double-ridge as we did for ASFR: if they don't overlap it'll be obvious. Does this pattern have month seasonality? It is identical for boy and girl births? This is very rich data and you're sure to find something interesting in it. 
 
 
 
