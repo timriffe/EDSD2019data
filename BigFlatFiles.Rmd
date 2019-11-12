@@ -61,7 +61,9 @@ print(object.size(NAT), units ="Mb")
 head(NAT)
 ```
 
-First let's fix the month and time variables, which parsed as character due to leading zeros. We can use `group_by()` and `summarize()` to tabulate as we please.
+The pre-step `fwf_positions()` is a helper function to tell `read_fwf()` where the columns are that we want to extract. This is the quickest and lightest option, since we don't have to read in the whole dataset, which would max out memory on machines under 4Gb of memory. I got the column positions (`start` and `end` vectors) from the pdf documentation that one can download alongside the data. If the providers were a bit more polite they would provide the column positions in a spreadsheet, but this wasn't so arduous. By reading in just columns we're interested in the data object is kept lighter and easier to work with. Data like this really shouldn't cause hangups when using these tools. There are other tricks one can use for truly large data, but we've not got into those. 
+
+First let's fix the month, hour, and minute variables, which parsed as character due to leading zeros. We can use `group_by()` and `summarize()` to tabulate as we please.
 ```{r}
 NAT <- 
   NAT %>% 
@@ -76,25 +78,32 @@ NAT %>%
          hour == 99) %>% 
   nrow()
 ```
-For the exercises I have in mind it's probably fine to throw these cases out if using the `time` variable as it's such a small fraction of births. But we could also redistribute them. In this case how? If we're lazy we might do so proportional to the distribution of births matched to all the characteristics they have in common. That means, of these 316 births, how many were in each month, with mothers and fathers of given ages, etc: Create a big multidimensional probability distribution for each combination of knowns for each birth. It's laborious, but also rather rigorous. Even more rigorous would be to include information on other variables you might not be interested in for the redistribution. @dudel2018estimating does something similar for missing ages of fathers. Before such an exercise we'd want to do a tabulation, which will make these data quite a bit lighter.
+For the exercises I have in mind it's probably fine to throw these cases out if using the `time` variable as it's such a small fraction of births. But we could also redistribute them. In this case how? If we're lazy we might do so proportional to the distribution of births matched to all the characteristics they have in common. That means we could create a big multidimensional probability distribution for each combination of knowns for each birth with unknown time of day. It's laborious, but also semirigorous. Even more rigorous would be to include information on other variables you might not be interested in for the redistribution. But the more things you include in the redistribution the smaller the cells get, and it ends up being a bunch of noise. In that case, you might want to smooth the distribution used to redistribute unknowns, and doing so already puts things in a more statistical setting, where it's best to take advice from an actual statistician. For problems of this kind, and large count data like these, it's common to use one or two variables for such redistributions. @dudel2018estimating does something similar for missing ages of fathers (rescale by the distribution of known fathers age within each mother age). IMO this is better than imputing means. Before such an exercise we'd want to do a tabulation, which will make these data quite a bit lighter.
 
 ```{r}
 NAT <- NAT %>% 
+  # tabulate by mother age, hour, minute
   group_by(mage, hour, minute) %>% 
   summarize(n = n()) %>% 
   ungroup() %>% 
-  mutate(dfrac = (hour * 60 + minute) / (24*60),
-         dfrac[minute == 99] <- NA) %>% 
+  # create a "fraction of the day" variable
+  mutate(dfrac = ifelse(minute == 99,              # condition
+                        NA,                        # true
+                        (hour * 60 + minute) / (24*60))) %>% # false
   select(mage, n, dfrac) %>% 
+  # whatever we group by is what we redistribute within
   group_by(mage) %>% 
+  # what is the fraction of births in each time-of-day within each mother age?
   mutate(bfrac = n / sum(n[!is.na(dfrac)]),
-         n = n + bfrac * 
+         n = n + bfrac * # multiply into birth of unknown time
                    ifelse(
                      sum(is.na(dfrac)) == 0, # condition
                      0,                      # true
                      n[is.na(dfrac)])) %>%   # false
   ungroup() %>% 
+  # now remove the NA times
   filter(!is.na(dfrac)) %>% 
+  # and get minute / hour back from the day fraction
   mutate(minute = floor((dfrac * (60 * 24)) %% 60),
          hour = floor((dfrac * (60 * 24)) - minute)) 
 # a <- c(1,4,56,6,76,5)
@@ -104,9 +113,19 @@ NAT <- NAT %>%
 Now we've redistributed births of unknown time of day according to the distribution of known time of day within each mother age. The *within* part of this was dealt with by the `group_by(mage)` statement, where one could add another variable or two to make it finer. 
 
 ```{r}
-
+library(lubridate)
+library(colorspace)
+logit <- function(x){
+  log(x/(1-x))
+}
 NAT %>% 
-  ggplot()
+  mutate(time = hm(paste(hour, minute,sep=":"))) %>% 
+  filter(mage >= 17,
+         mage <= 35) %>% 
+  ggplot(mapping = aes(x = dfrac, y = mage, fill = logit(bfrac))) +
+  geom_tile() + 
+  xlim(0,1) + 
+  scale_fill_continuous_sequential("Viridis")
 
 
 ```

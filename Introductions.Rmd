@@ -421,7 +421,6 @@ Download the spreadsheet and stick it in a new folder called `Data`. We're going
 
 ```{r}
 library(readxl)
-library(readxl)
 ASFR <- read_excel(
   "Data/Age-specific fertility rates, Total fertility and .xls", 
     na = "..", 
