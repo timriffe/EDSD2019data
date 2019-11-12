@@ -374,6 +374,7 @@ Max-Planck-Institute for Demographic Research</div></h4>
 <div id="TOC">
 <ul>
 <li><a href="#introduction"><span class="toc-section-number">1</span> Introduction</a></li>
+<li><a href="#references">References</a></li>
 </ul>
 </div>
 
@@ -381,29 +382,93 @@ Max-Planck-Institute for Demographic Research</div></h4>
 <style>.github-corner:hover .octo-arm{animation:octocat-wave 560ms ease-in-out}@keyframes octocat-wave{0%,100%{transform:rotate(0)}20%,60%{transform:rotate(-25deg)}40%,80%{transform:rotate(10deg)}}@media (max-width:500px){.github-corner:hover .octo-arm{animation:none}.github-corner .octo-arm{animation:octocat-wave 560ms ease-in-out}}</style>
 <div id="introduction" class="section level1">
 <h1><span class="header-section-number">1</span> Introduction</h1>
-<p>We’re talking about big birth, death, and marriage flat files, as commonly produced by Spain, USA, Mexico, and others. Anyone know of other countries that openly share data in this form? Let’s compile a list of the ones we know about and add links here. The tools we use today could be useful for any of them.</p>
+<p>We’re talking about big birth, death, and marriage flat files, as commonly produced by Spain, USA, Mexico, and others. Anyone know of other countries that openly share data in this form? Let’s compile a list of the ones we know about and add links here. The tools we use today could be useful for any of them. Let’s make a list of open data we know about:</p>
 <ol style="list-style-type: decimal">
 <li>USA <a href="https://www.cdc.gov/nchs/data_access/vitalstatsonline.htm">https://www.cdc.gov/nchs/data_access/vitalstatsonline.htm</a></li>
 <li>Spain <a href="https://ine.es/dyngs/INEbase/es/operacion.htm?c=Estadistica_C&amp;cid=1254736177008&amp;menu=resultados&amp;secc=1254736195450&amp;idp=1254735573002">ine.es</a> This link for mortality, but there are other pages for marriage, natality, and other things.</li>
-<li>?</li>
+<li>Mexico? links broken?</li>
+<li></li>
 </ol>
 <p>Download the USA 2018 Natality file, and unzip it in the Data folder (around 5Gb). You can rezip it if you want as a <code>.gz</code> file or similar, if you want to have it take up less space. We’ll just read in selected columns and then do fun things from there. This is really quite fast and easy to do using the <code>readr</code> package and browsing the data documetation.</p>
-<pre class="r"><code>library(readr)
-NAT &lt;- read_fwf(here::here(&quot;Data&quot;,&quot;Nat2018PublicUS.c20190509.r20190717.txt&quot;), 
-               fwf_positions(c(9, 13, 19, 23, 75, 147), 
-                             c(12, 14, 22, 23, 76, 148), 
-                             c(&quot;year&quot;, &quot;month&quot;, &quot;time&quot;,&quot;weekday&quot;,&quot;mage&quot;,&quot;fage&quot;)))</code></pre>
+<p>Load packages</p>
+<pre class="r"><code>library(tidyverse)
+library(readr)</code></pre>
+<p>Give <code>read_fwf()</code> a whirl. This worked on the first try after glancing at the options in the help file (type <code>?read_fwf</code> in the console).</p>
+<pre class="r"><code>pos &lt;- fwf_positions(
+         start = c(9, 13, 19, 21, 23, 75, 147), 
+         end = c(12, 14, 20, 22, 23, 76, 148), 
+         col_names = c(&quot;year&quot;, &quot;month&quot;, &quot;hour&quot;,&quot;minute&quot;,&quot;weekday&quot;,&quot;mage&quot;,&quot;fage&quot;))
+
+NAT &lt;- read_fwf(
+  here::here(&quot;Data&quot;,&quot;Nat2018PublicUS.c20190509.r20190717.txt&quot;), 
+  pos)</code></pre>
 <pre><code>## Parsed with column specification:
 ## cols(
 ##   year = col_double(),
 ##   month = col_character(),
-##   time = col_character(),
+##   hour = col_character(),
+##   minute = col_character(),
 ##   weekday = col_double(),
 ##   mage = col_double(),
 ##   fage = col_double()
 ## )</code></pre>
-<pre class="r"><code>print(object.size(NAT),units =&quot;Mb&quot;)</code></pre>
-<pre><code>## 174.1 Mb</code></pre>
+<pre class="r"><code>print(object.size(NAT), units =&quot;Mb&quot;)</code></pre>
+<pre><code>## 203 Mb</code></pre>
+<pre class="r"><code>head(NAT)</code></pre>
+<pre><code>## # A tibble: 6 x 7
+##    year month hour  minute weekday  mage  fage
+##   &lt;dbl&gt; &lt;chr&gt; &lt;chr&gt; &lt;chr&gt;    &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;
+## 1  2018 01    12    27           2    30    31
+## 2  2018 01    17    04           2    35    35
+## 3  2018 01    03    36           2    28    31
+## 4  2018 01    09    38           2    23    26
+## 5  2018 01    08    30           3    37    35
+## 6  2018 01    00    28           2    26    28</code></pre>
+<p>First let’s fix the month and time variables, which parsed as character due to leading zeros. We can use <code>group_by()</code> and <code>summarize()</code> to tabulate as we please.</p>
+<pre class="r"><code>NAT &lt;- 
+  NAT %&gt;% 
+  mutate(month = as.integer(month),
+         hour = as.integer(hour),
+         minute = as.integer(minute))</code></pre>
+<p>Check missing time: 316 cases</p>
+<pre class="r"><code>NAT %&gt;% 
+  filter(minute == 99,
+         hour == 99) %&gt;% 
+  nrow()</code></pre>
+<pre><code>## [1] 316</code></pre>
+<p>For the exercises I have in mind it’s probably fine to throw these cases out if using the <code>time</code> variable as it’s such a small fraction of births. But we could also redistribute them. In this case how? If we’re lazy we might do so proportional to the distribution of births matched to all the characteristics they have in common. That means, of these 316 births, how many were in each month, with mothers and fathers of given ages, etc: Create a big multidimensional probability distribution for each combination of knowns for each birth. It’s laborious, but also rather rigorous. Even more rigorous would be to include information on other variables you might not be interested in for the redistribution. <span class="citation">Dudel and Klüsener (2018)</span> does something similar for missing ages of fathers. Before such an exercise we’d want to do a tabulation, which will make these data quite a bit lighter.</p>
+<pre class="r"><code>NAT &lt;- NAT %&gt;% 
+  group_by(mage, hour, minute) %&gt;% 
+  summarize(n = n()) %&gt;% 
+  ungroup() %&gt;% 
+  mutate(dfrac = (hour * 60 + minute) / (24*60),
+         dfrac[minute == 99] &lt;- NA) %&gt;% 
+  select(mage, n, dfrac) %&gt;% 
+  group_by(mage) %&gt;% 
+  mutate(bfrac = n / sum(n[!is.na(dfrac)]),
+         n = n + bfrac * 
+                   ifelse(
+                     sum(is.na(dfrac)) == 0, # condition
+                     0,                      # true
+                     n[is.na(dfrac)])) %&gt;%   # false
+  ungroup() %&gt;% 
+  filter(!is.na(dfrac)) %&gt;% 
+  mutate(minute = floor((dfrac * (60 * 24)) %% 60),
+         hour = floor((dfrac * (60 * 24)) - minute)) 
+# a &lt;- c(1,4,56,6,76,5)
+# a[is.na(a)] * 1</code></pre>
+<p>Now we’ve redistributed births of unknown time of day according to the distribution of known time of day within each mother age. The <em>within</em> part of this was dealt with by the <code>group_by(mage)</code> statement, where one could add another variable or two to make it finer.</p>
+<pre class="r"><code>NAT %&gt;% 
+  ggplot()</code></pre>
+<p><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABUAAAAPACAMAAADDuCPrAAAABlBMVEXr6+v///+HIERrAAAACXBIWXMAAB2HAAAdhwGP5fFlAAAMUklEQVR4nO3UsQnAMBDAwM/+S7s3mBg1IXA3gSrNA0AyXwcA/JWBAkQGChAZKEBkoACRgQJEBgoQGShAZKAAkYECRAYKEBkoQGSgAJGBAkT7QAeAAwMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIDJQgMhAASIDBYheBgrAJQMFiAwUIDJQgMhAASIDBYgMFCAyUIDIQAEiAwWIDBQgMlCAyEABIgMFiAwUIFrXuwqMaIChfQAAAABJRU5ErkJggg==" width="672" /></p>
+</div>
+<div id="references" class="section level1 unnumbered">
+<h1>References</h1>
+<div id="refs" class="references">
+<div id="ref-dudel2018estimating">
+<p>Dudel, Christian, and Sebastian Klüsener. 2018. “Estimating Men’s Fertility from Vital Registration Data with Missing Values.” <em>Population Studies</em>. Taylor &amp; Francis, 1–11.</p>
+</div>
+</div>
 </div>
 
 
