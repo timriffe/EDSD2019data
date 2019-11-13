@@ -56,9 +56,9 @@ pos <- fwf_positions(
 
 NAT <- read_fwf(
   here::here("Data","Nat2018PublicUS.c20190509.r20190717.txt"), 
-  pos)
+  col_positions = pos)
 print(object.size(NAT), units ="Mb")
-head(NAT)
+
 ```
 
 The pre-step `fwf_positions()` is a helper function to tell `read_fwf()` where the columns are that we want to extract. This is the quickest and lightest option, since we don't have to read in the whole dataset, which would max out memory on machines under 4Gb of memory. I got the column positions (`start` and `end` vectors) from the pdf documentation that one can download alongside the data. If the providers were a bit more polite they would provide the column positions in a spreadsheet, but this wasn't so arduous. By reading in just columns we're interested in the data object is kept lighter and easier to work with. Data like this really shouldn't cause hangups when using these tools. There are other tricks one can use for truly large data, but we've not got into those. 
@@ -124,13 +124,12 @@ logit <- function(x){
   log(x/(1-x))
 }
 NAT %>% 
-  mutate(time = paste(hour, minute,sep=":"),
+  mutate(time = paste(hour, minute, sep = ":"),
          time = as.POSIXct(time, format = "%H:%M")) %>% 
   filter(mage >= 17,
          mage <= 35) %>% 
   ggplot(mapping = aes(x = time, y = mage, fill = logit(bfrac))) +
   geom_tile() + 
-  xlim(0,1) + 
   scale_fill_continuous_sequential("Viridis") +
   scale_x_datetime(date_breaks="2 hour", date_labels="%H:%M", expand = c(0,0))
 ```
@@ -149,7 +148,7 @@ NAT %>%
   summarize(bfrac = sum(bfrac)) %>% 
   ungroup() %>% 
   # now declare hourmin time variable
-  mutate(time = paste(hour, min10,sep=":"),
+  mutate(time = paste(hour, min10, sep = ":"),
          time = as.POSIXct(time, format = "%H:%M")) %>% 
   # select age range of interest
   filter(mage %% 5 == 0,
@@ -163,7 +162,7 @@ NAT %>%
 	geom_ridgeline(mapping = aes(x = time, 
  								               height = bfrac), 
 	               scale = 70,
- 				         alpha = .6)+
+ 				         alpha = .6) +
   scale_x_datetime(date_breaks="2 hour", date_labels="%H:%M", expand = c(0,0))
        
 ```

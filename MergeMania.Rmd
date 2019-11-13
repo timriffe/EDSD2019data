@@ -32,4 +32,70 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Introduction
 
-Let's walk through the data processing behind Jose Manuel's talk today.
+I've download the World Values Survey Longitudinal file from here: [http://www.worldvaluessurvey.org/](http://www.worldvaluessurvey.org/), which ships in 4 different data formats, including `.rds`! Download it too, and unzip it in the `Data` folder for this project. Let's see what's inside.
+
+Packages we'll use:
+```{r, message = FALSE, warning = FALSE}
+library(here)
+library(tidyverse)
+```
+
+This dataset is quite wide because they ask tons of questions. Many of them are super intersting. The objective now is to merge some variable from WVS into the a WPP demographic dataset. We need to solve the following problems in order to have merge variables that are sufficiently harmonized for this to work. Meaning: 
+
+1. Age should either be in clean single ages or clean grouped ages. For similicity we'll use 5-year age groups. 
+2. We need harmonized years. WPP give 5-year intervals, so we can year-group the WVS data.
+3. We need to get some sort of prevalence or mean measure per 5-year age group in some interesting variable (by year, age, sex and country). We can do this using the `summarize()` function instead of regression. Regression would be cool though.
+4. We need to reshape the WPP data to long (`pivot_longer`)
+```{r}
+WVS <- readRDS(
+  here::here("Data",
+             "F00008390-WVS_Longitudinal_1981_2016_r_v20180912.rds"))
+colnames(WVS)
+# country code
+unique(WVS$S003)
+# year
+unique(WVS$S020)
+# homogeneous weight (all countries equal N = 1500)
+# S019 
+
+# sex
+unique(WVS$X001)
+
+# age
+hist(WVS$X003)
+# cohort
+WVS$X002
+
+# A015 "People can be trusted"
+table(WVS$A165)
+```
+
+Select ISO, Year, Age, Sex, Person Weight, Trust
+```{r}
+WVS %>% 
+  select(ISO = S003, 
+         year = S020, # Year
+         sex = X001, # Sex
+         age = X003, # age
+         trust = A165,
+         pwt = S017) %>%  # trust
+  #pull(age) %>% table() # spot check for negative age
+  filter(age >= 0) %>% 
+  mutate(year = year - year %% 5,
+         age = age - age %% 5) %>% 
+  glimpse()
+```
+
+
+
+
+Now let's talk about what one might join and how. Here's a dataset that uses the same country codes.
+```{r}
+#install.packages("wpp2019")
+library(wpp2019)
+help(wpp2019)
+#head(mxF)
+# not bad coincidence!
+intersect(unique(mxF$country_code),unique(WVS$S003))
+```
+

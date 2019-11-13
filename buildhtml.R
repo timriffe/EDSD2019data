@@ -15,5 +15,8 @@ render.this <- "../EDSD2019data/BigFlatFiles.Rmd"
 render(render.this, output_dir = output_dir, 
        params = list(output_dir = output_dir))
 
+render.this <- "../EDSD2019data/MergeMania.Rmd"
+render(render.this, output_dir = output_dir, 
+       params = list(output_dir = output_dir))
 
 
