@@ -4,11 +4,11 @@ title: |
   | Data Wrangling for EDSDers
   | \vspace{1.5cm} \LARGE\emph{Module outline}
 author: |
-  | United Nations Population Division
+  | Centre d'Estudis Demografics
   | 11-14 Nov, 2019
   | Tim Riffe
   | Max-Planck-Institute for Demographic Research
-date: "13 August, 2019"
+date: "13 Nob, 2019"
 output:
   html_document:
     number_sections: yes
@@ -50,52 +50,112 @@ This dataset is quite wide because they ask tons of questions. Many of them are 
 WVS <- readRDS(
   here::here("Data",
              "F00008390-WVS_Longitudinal_1981_2016_r_v20180912.rds"))
-colnames(WVS)
+#colnames(WVS)
 # country code
 unique(WVS$S003)
 # year
 unique(WVS$S020)
 # homogeneous weight (all countries equal N = 1500)
 # S019 
-
 # sex
 unique(WVS$X001)
-
 # age
-hist(WVS$X003)
+sort(unique(WVS$X003))
 # cohort
-WVS$X002
-
+#WVS$X002
 # A015 "People can be trusted"
 table(WVS$A165)
 ```
 
 Select ISO, Year, Age, Sex, Person Weight, Trust
 ```{r}
-WVS %>% 
+WVS <- 
+  WVS %>% 
   select(ISO = S003, 
          year = S020, # Year
          sex = X001, # Sex
          age = X003, # age
          trust = A165,
          pwt = S017) %>%  # trust
-  #pull(age) %>% table() # spot check for negative age
-  filter(age >= 0) %>% 
+  #pull(sex) %>% table() # spot check for negative age
+  filter(age >= 0,
+         trust > 0,
+         sex > 0) %>% 
   mutate(year = year - year %% 5,
-         age = age - age %% 5) %>% 
-  glimpse()
+         age = age - age %% 5,
+         distrust = trust - 1,
+         trust = 1 - distrust) %>% 
+  group_by(ISO, sex, year, age) %>% 
+  summarize(trust = sum(trust * pwt) / sum(pwt),
+            distrust = sum(distrust * pwt) / sum(pwt)) %>% 
+  ungroup() 
 ```
-
-
-
 
 Now let's talk about what one might join and how. Here's a dataset that uses the same country codes.
 ```{r}
 #install.packages("wpp2019")
 library(wpp2019)
-help(wpp2019)
-#head(mxF)
+data(mxF)
+data(mxM)
 # not bad coincidence!
-intersect(unique(mxF$country_code),unique(WVS$S003))
+#intersect(unique(mxF$country_code),unique(WVS$S003))
+head(mxF)
+px_to_lx <- function(px){
+  n <- length(px)
+  c(1,cumprod(px)[-n])
+}
+# add sex column to both datasets
+mxF <- mxF %>% 
+  mutate(sex = 2)
+mxM <- mxM %>% 
+  mutate(sex = 1)
+# bind two sexes together
+mxT <- rbind(mxF, mxM)
+# send it down the pipe
+mxT <- 
+  mxT %>% 
+  pivot_longer(cols = 4:33, 
+               names_to = "year",
+               values_to = "nMx") %>% 
+  mutate(year = substr(year, 
+                       start = 1, 
+                       stop = 4),
+         year = as.integer(year),
+         # in a case_when go from the
+         # specific to the general
+         AgeInt = case_when(
+           age == 0 ~ 1,
+           age == 1 ~ 4,
+           TRUE ~ 5 # catch-all
+         ),
+         nAx = AgeInt / 2,
+         qx = ifelse(age == 100, 
+                     1,
+                     (AgeInt * nMx) / 
+           (1 + (AgeInt - nAx) * nMx))) %>% 
+  arrange(country_code, sex, year, age) %>% 
+  group_by(country_code, sex, year) %>% 
+  mutate(px = 1 - qx,
+         lx = px_to_lx(px),
+         dx = qx * lx,
+         Lx = dx / nMx) %>% 
+  rename(ISO = country_code) %>% 
+  filter(year >= 1980,
+         year <= 2015)
+```
+
+Now we're ready to do our join operation. Look at how much overhead was needed in order to turn these two datasets into joinable things!! The lesson: you need to have 1) identically named and 2) identically coded columns on which to join. It would have been a heck of alot easier to join if we only needed to join on ISO codes! But hey, we have super awesome detailed and nested demographic data that we wish to preserve in the name of science.
+
+```{r}
+mxT <- left_join(
+  mxT, 
+  WVS, 
+  by = c("ISO","sex","year","age"))
+
+mxT %>% 
+  group_by(ISO, sex, year) %>% 
+  mutate(remove = all(is.na(trust))) %>% 
+  ungroup() %>% 
+  filter(!remove)
 ```
 
