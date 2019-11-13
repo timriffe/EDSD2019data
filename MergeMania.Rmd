@@ -151,11 +151,43 @@ mxT <- left_join(
   mxT, 
   WVS, 
   by = c("ISO","sex","year","age"))
+```
 
+We need a helper function whose job it is to replace NAs with the average of neighboring cells. 
+```{r}
+na_averager <- function(age, prev){
+  ind <- is.na(prev)
+  # if nothing is missing just return prev
+  if (all(!ind)){
+    return(prev)
+  }
+  # otherwise we need to do this
+  approx(x = age[!ind],
+         y = prev[!ind],
+         xout = age, 
+         rule = 2)$y
+}
+# x <- c(15,20,25,30,35,40)
+# y <- c(NA,.3,NA,.5,.6,NA)
+# na_averager(age=x, prev = y)
+```
+
+
+```{r}
 mxT %>% 
   group_by(ISO, sex, year) %>% 
   mutate(remove = all(is.na(trust))) %>% 
   ungroup() %>% 
-  filter(!remove)
+  filter(!remove,
+         age >= 15) %>% 
+ group_by(ISO, sex, year) %>%
+  mutate(trust = na_averager(age, 
+                             prev = trust),
+         distrust = 1 - trust) %>% 
+  summarize(e15trust = sum(Lx * trust) / 
+                           lx[age == 15],
+            e15distrust = sum(Lx * distrust) / 
+                           lx[age == 15]) %>% 
+  nrow()
 ```
 
