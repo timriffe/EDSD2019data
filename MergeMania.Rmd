@@ -174,7 +174,7 @@ na_averager <- function(age, prev){
 
 
 ```{r}
-mxT %>% 
+eTrust <- mxT %>% 
   group_by(ISO, sex, year) %>% 
   mutate(remove = all(is.na(trust))) %>% 
   ungroup() %>% 
@@ -187,7 +187,6 @@ mxT %>%
   summarize(e15trust = sum(Lx * trust) / 
                            lx[age == 15],
             e15distrust = sum(Lx * distrust) / 
-                           lx[age == 15]) %>% 
-  nrow()
+                           lx[age == 15]) 
 ```
 
