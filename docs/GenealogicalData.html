@@ -363,7 +363,7 @@ summary {
 
 <h1 class="title toc-ignore"><div class="line-block">Data Wrangling for EDSDers<br />
  </div></h1>
-<h4 class="author"><div class="line-block">United Nations Population Division<br />
+<h4 class="author"><div class="line-block">Centre d’Estudis Demogràfics<br />
 11-14 Nov, 2019<br />
 Tim Riffe<br />
 Max-Planck-Institute for Demographic Research</div></h4>
@@ -373,27 +373,29 @@ Max-Planck-Institute for Demographic Research</div></h4>
 
 <div id="TOC">
 <ul>
-<li><a href="#introduction"><span class="toc-section-number">0.1</span> Introduction</a></li>
-<li><a href="#familinx"><span class="toc-section-number">1</span> FamiLinx</a></li>
-<li><a href="#get-decimal-event-dates."><span class="toc-section-number">2</span> get decimal event dates.</a><ul>
-<li><a href="#examine-date-columns"><span class="toc-section-number">2.1</span> examine date columns</a></li>
-<li><a href="#validate-date-information"><span class="toc-section-number">2.2</span> validate date information</a></li>
-<li><a href="#test-date-conversion"><span class="toc-section-number">2.3</span> test date conversion</a></li>
-<li><a href="#fix-recorded-day"><span class="toc-section-number">2.4</span> fix recorded day</a></li>
-<li><a href="#finally-the-date-conversion"><span class="toc-section-number">2.5</span> finally the date conversion!</a></li>
+<li><a href="#introduction"><span class="toc-section-number">1</span> Introduction</a></li>
+<li><a href="#familinx"><span class="toc-section-number">2</span> FamiLinx</a></li>
+<li><a href="#decimal-event-dates."><span class="toc-section-number">3</span> Decimal event dates.</a><ul>
+<li><a href="#examine-date-columns"><span class="toc-section-number">3.1</span> Examine date columns</a></li>
 </ul></li>
-<li><a href="#calculate-individual-exposures-for-mortality"><span class="toc-section-number">3</span> Calculate individual exposures for mortality</a><ul>
-<li><a href="#tabulate-deaths-in-lexis-triangles"><span class="toc-section-number">3.1</span> Tabulate deaths in Lexis triangles</a></li>
-<li><a href="#impute-empty-cells-with-0s-using-join-operation"><span class="toc-section-number">3.2</span> impute empty cells with 0s using join operation</a></li>
+<li><a href="#validate-date-information"><span class="toc-section-number">4</span> Validate date information</a><ul>
+<li><a href="#test-date-conversion"><span class="toc-section-number">4.1</span> test date conversion</a></li>
+<li><a href="#fix-recorded-day"><span class="toc-section-number">4.2</span> fix recorded day</a></li>
 </ul></li>
+<li><a href="#the-date-conversion"><span class="toc-section-number">5</span> The date conversion!</a></li>
+<li><a href="#calculate-individual-exposures-for-mortality"><span class="toc-section-number">6</span> Calculate individual exposures for mortality</a><ul>
+<li><a href="#tabulate-deaths-in-lexis-triangles"><span class="toc-section-number">6.1</span> Tabulate deaths in Lexis triangles</a></li>
+<li><a href="#impute-empty-cells-with-0s-using-join-operation"><span class="toc-section-number">6.2</span> impute empty cells with 0s using join operation</a></li>
+</ul></li>
+<li><a href="#todo"><span class="toc-section-number">7</span> TODO</a></li>
 <li><a href="#references">References</a></li>
 </ul>
 </div>
 
 <a href="https://github.com/timriffe/EDSD2019data" class="github-corner" aria-label="View source on GitHub"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#70B7FD; color:#fff; position: absolute; top: 0; border: 0; right: 0;" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
 <style>.github-corner:hover .octo-arm{animation:octocat-wave 560ms ease-in-out}@keyframes octocat-wave{0%,100%{transform:rotate(0)}20%,60%{transform:rotate(-25deg)}40%,80%{transform:rotate(10deg)}}@media (max-width:500px){.github-corner:hover .octo-arm{animation:none}.github-corner .octo-arm{animation:octocat-wave 560ms ease-in-out}}</style>
-<div id="introduction" class="section level2">
-<h2><span class="header-section-number">0.1</span> Introduction</h2>
+<div id="introduction" class="section level1">
+<h1><span class="header-section-number">1</span> Introduction</h1>
 <p>Genealogical data can have different structures, ranging from complicated relational trees to tidy individualized data with minimal parentage links. Genealogical data is a particular kind of network data, and any data structure that exists to represent a network can be used to represent it. Such data allow you to explore dimensions of population structure that cannot be known from a census, and that no population register would ever allow you to calculate. You can also measure fertility, mortality, bereavment, and such things in oddly stratified ways. Diego Alburrez has kindly given me a big hunk of genealogical data from <a href="https://familinx.org/">FamiLinx</a>. These data have been used in large scale projects to detect demographic patterns, an dyou can find a good description of the data in <span class="citation">Kaplanis et al. (2018)</span>. He’ll give you a module on accounting for biases in online data (or similar) and may use genealogical data as a case study, so let’s get some exercise wrangling with it.</p>
 <p>Prerequisites: we’ll use the <code>here</code> package and <code>tidyverse</code> tools for the time being.</p>
 <pre class="r"><code>library(here)
@@ -401,20 +403,21 @@ library(tidyverse)
 library(lubridate)</code></pre>
 </div>
 <div id="familinx" class="section level1">
-<h1><span class="header-section-number">1</span> FamiLinx</h1>
+<h1><span class="header-section-number">2</span> FamiLinx</h1>
+<p>Diego Alburrez kindly provided me with data I have used for this example, but AFAIK I can’t simply post it on the internet for all to download. If you’d like to work through this example, please contact me directly for the data. If you’ve got a project setup for this module with a <code>Data</code> folder, then just stick the data in a subfolder called <code>FamiLinx</code>.</p>
 <pre class="r"><code>links &lt;- readRDS(here::here(&quot;Data&quot;,&quot;FamiLinx&quot;,&quot;links_de.RDS&quot;))
-prof &lt;- readRDS(here::here(&quot;Data&quot;,&quot;FamiLinx&quot;,&quot;prof_de.RDS&quot;))
+prof  &lt;- readRDS(here::here(&quot;Data&quot;,&quot;FamiLinx&quot;,&quot;prof_de.RDS&quot;))
 # glimpse(prof)</code></pre>
 </div>
-<div id="get-decimal-event-dates." class="section level1">
-<h1><span class="header-section-number">2</span> get decimal event dates.</h1>
+<div id="decimal-event-dates." class="section level1">
+<h1><span class="header-section-number">3</span> Decimal event dates.</h1>
 <p>The dated events for each life in these data include birth, baptism, death, and burial. Notice that each event date is currently represented with multiple columns, pertinently one each for year, month, and day of the event. These ought to all be integers, but they are not. Let’s convert them before going further.</p>
 <p>This sort of thing can be done even more laboriously, we can show some more.</p>
 <pre class="r"><code>prof &lt;- prof %&gt;% 
   mutate_at(grep(colnames(.),pattern = &quot;_day&quot;, value = TRUE), as.integer) %&gt;% 
   mutate_at(grep(colnames(.),pattern = &quot;_month&quot;, value = TRUE), as.integer)</code></pre>
 <div id="examine-date-columns" class="section level2">
-<h2><span class="header-section-number">2.1</span> examine date columns</h2>
+<h2><span class="header-section-number">3.1</span> Examine date columns</h2>
 <p>These will be messy data, let’s have a look:</p>
 <pre class="r"><code>prof %&gt;% pull(death_day) %&gt;% table()</code></pre>
 <pre><code>## .
@@ -444,8 +447,9 @@ prof &lt;- readRDS(here::here(&quot;Data&quot;,&quot;FamiLinx&quot;,&quot;prof_d
 <li>Given the nature of these data, what might we do to infer erroneous dates?</li>
 </ul>
 </div>
-<div id="validate-date-information" class="section level2">
-<h2><span class="header-section-number">2.2</span> validate date information</h2>
+</div>
+<div id="validate-date-information" class="section level1">
+<h1><span class="header-section-number">4</span> Validate date information</h1>
 <p>Now back to being pragmatic. Let’s make a function that does a logical check for the proper range of days and months, and we’ll also use it to filter births and deaths after the year 1500. We can keep people that are still alive, why not?</p>
 <pre class="r"><code>keep_date &lt;- function(day, month, year){
   !is.na(day) &amp; !is.na(month) &amp; !is.na(year) &amp;
@@ -482,9 +486,8 @@ convert_date(1,1,2001)   # exactly 0</code></pre>
 <pre><code>## [1] 2001.496</code></pre>
 <pre class="r"><code>convert_date(31,12,2001) # almost 1</code></pre>
 <pre><code>## [1] 2001.997</code></pre>
-</div>
 <div id="test-date-conversion" class="section level2">
-<h2><span class="header-section-number">2.3</span> test date conversion</h2>
+<h2><span class="header-section-number">4.1</span> test date conversion</h2>
 <p>And now we can use it in a pipeline, test run:</p>
 <pre class="r"><code>prof %&gt;% 
   filter(birth_valid &amp; death_valid) %&gt;% 
@@ -495,7 +498,7 @@ convert_date(1,1,2001)   # exactly 0</code></pre>
   select(is_alive, birth_valid, birth_dec, birth_day, birth_month, birth_year, death_year)</code></pre>
 </div>
 <div id="fix-recorded-day" class="section level2">
-<h2><span class="header-section-number">2.4</span> fix recorded day</h2>
+<h2><span class="header-section-number">4.2</span> fix recorded day</h2>
 <p>Wow, there are lots of cases of day falling in [1,31) but not in the valid range of the month. And here one would need to account for leap years. In all cases, the recorded day exceeds the number of days in the month, so let’s truncate these to the actual last day of the month. In terms of annualized exposure, this will have trivial impact, and clearly these cases shouldn’t be outright discarded. Here’s a helper function, making use of <code>lubridate</code>’s <code>days_in_month()</code> function. If the day is out of range, we truncate, and if it’s in range we return it back.</p>
 <pre class="r"><code>fix_day &lt;- function(day, month, year){
   max_days &lt;- paste(year, month, &quot;1&quot;, sep =&quot;-&quot;) %&gt;% 
@@ -510,8 +513,9 @@ fix_day(31,2,2001)</code></pre>
 <pre><code>## Feb 
 ##  29</code></pre>
 </div>
-<div id="finally-the-date-conversion" class="section level2">
-<h2><span class="header-section-number">2.5</span> finally the date conversion!</h2>
+</div>
+<div id="the-date-conversion" class="section level1">
+<h1><span class="header-section-number">5</span> The date conversion!</h1>
 <p>We’ll create the new decimal date columns and generate some other variables while at it.</p>
 <pre class="r"><code>prof &lt;- prof %&gt;% 
   filter(birth_valid &amp; death_valid) %&gt;% 
@@ -527,9 +531,8 @@ fix_day(31,2,2001)</code></pre>
 ## Warning: 182 failed to parse.</code></pre>
 <pre class="r"><code># we still lose some cases in the coversion of death_day somehow.</code></pre>
 </div>
-</div>
 <div id="calculate-individual-exposures-for-mortality" class="section level1">
-<h1><span class="header-section-number">3</span> Calculate individual exposures for mortality</h1>
+<h1><span class="header-section-number">6</span> Calculate individual exposures for mortality</h1>
 <p>There are a few different ways to calculate exposure here, all involving iteration as far as I can tell. You can iterate over combinations of age and period or age and cohort, asking for each cell how many cases. We could also iterate over individuals, asking for each which ages they pass through and adding a year into each time cell along the way, and accounting for the decimal fraction in the last year of life. We could also just tabulate age and period of death, and then use arithmetic to accumulate these deaths backwards within cohorts. In principle, this last one is the one that lets us be the laziest, and we always choose the laziest path you can think of. For this to work with adequate rigor, we need to split <code>lifespan</code> into two parts, the integer fraction below the completed decimal lifespan, and then the final fractional year at the end. We tabulate on the first of these, and then use the little fractions to adjust afterwards.</p>
 <pre class="r"><code>prof &lt;- prof %&gt;% 
   mutate(completed_age_at_death = floor(lifespan),
@@ -538,7 +541,7 @@ fix_day(31,2,2001)</code></pre>
          cohort = floor(birth_year))
 #glimpse(prof)</code></pre>
 <div id="tabulate-deaths-in-lexis-triangles" class="section level2">
-<h2><span class="header-section-number">3.1</span> Tabulate deaths in Lexis triangles</h2>
+<h2><span class="header-section-number">6.1</span> Tabulate deaths in Lexis triangles</h2>
 <p>Tabulation is two steps: 1) declare groups, 2) count cases inside groups using <code>n()</code> inside <code>summarize()</code>.</p>
 <pre class="r"><code>APC &lt;-
   prof %&gt;% 
@@ -549,13 +552,17 @@ fix_day(31,2,2001)</code></pre>
             dfrac = sum(final_fraction))</code></pre>
 </div>
 <div id="impute-empty-cells-with-0s-using-join-operation" class="section level2">
-<h2><span class="header-section-number">3.2</span> impute empty cells with 0s using join operation</h2>
+<h2><span class="header-section-number">6.2</span> impute empty cells with 0s using join operation</h2>
 <p>Now we have deaths tabulated, but to get exposures, it will help to impute 0s so that we don’t have gaps in the data.</p>
 <pre class="r"><code>APCgrid &lt;- expand.grid(completed_age_at_death = 0:100,
             period = 1500:2019,
             cohort = 1500:2019) %&gt;% 
   filter(period &gt;= cohort)</code></pre>
 </div>
+</div>
+<div id="todo" class="section level1">
+<h1><span class="header-section-number">7</span> TODO</h1>
+<p>We never went forward with this lesson, so this much is left here in case anyone finds it handy. I would have tried to find a nice way to calculate exposures and rates starting from this point. We would have looked to see if rates in particular age ranges are more plausible than others, and perhaps tried to plot some trends in synthetic indices or else moved on to kinship.</p>
 </div>
 <div id="references" class="section level1 unnumbered">
 <h1>References</h1>
