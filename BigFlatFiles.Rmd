@@ -47,6 +47,7 @@ library(tidyverse)
 library(readr)
 ```
 
+# Reading a fixed width file
 Give `read_fwf()` a whirl. This worked on the first try after glancing at the options in the help file (type `?read_fwf` in the console).
 ```{r}
 pos <- fwf_positions(
@@ -71,6 +72,8 @@ NAT <-
          hour = as.integer(hour),
          minute = as.integer(minute))
 ```
+
+# Redistribute missing time of day
 Check missing time: 316 cases
 ```{r}
 NAT %>% 
@@ -115,6 +118,7 @@ NAT <- NAT %>%
 # a[is.na(a)] * 1
 ```
 
+# Visualize it: surface
 Now we've redistributed births of unknown time of day according to the distribution of known time of day within each mother age. The *within* part of this was dealt with by the `group_by(mage)` statement, where one could add another variable or two to make it finer. However, already for mother age under ca 15 or over ca 35, we're not filling each minute of the day with observations. Were we to zoom in we might even observeminute heaping...
 
 ```{r, warning = FALSE, message = FALSE}
@@ -135,6 +139,8 @@ NAT %>%
 ```
 
 You'll note a two-step `mutate()` call that defines the `time` variable out of hours and minutes. In order to get `ggplot()` to render x axis as properly formatted hours, it's a good idea to convert our integer representation of hours and minutes into a real time class. Time classes are varied and tricky. From `ggplot()` warnings I learned the `POSIXct` format was needed, and a this StackOverflow answer gave me what I needed to fix it [https://learnr.wordpress.com/2010/02/25/ggplot2-plotting-dates-hours-and-minutes/](https://learnr.wordpress.com/2010/02/25/ggplot2-plotting-dates-hours-and-minutes/), so now the x axis looks good in the plot.
+
+# Visualize it: ridgeplot
 
 We trucate `mage` in order to remove noise that might distort the pattern, but we could recover more of the surface if it were smoothed. We might be able to recover more definition in the time of day pattern if it were represented as lines. Let's see:
 
@@ -169,8 +175,6 @@ NAT %>%
 OK, we could sense some of this variation in the surface plot, but here it's a but clearer I think: the 8:00 peak gets sharper as mother age increases, and the 13:00 also emerges with age.
 
 If you don't know what you want to do for your assignment, you might ask: how much of this pattern is due to cesarians? For that, just repeat the same thing twice and plot a double-ridge as we did for ASFR: if they don't overlap it'll be obvious. Does this pattern have month seasonality? It is identical for boy and girl births? This is very rich data and you're sure to find something interesting in it. 
-
-
 
 # References
 

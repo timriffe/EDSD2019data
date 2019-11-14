@@ -376,6 +376,8 @@ Max-Planck-Institute for Demographic Research</div></h4>
 <li><a href="#introduction"><span class="toc-section-number">1</span> Introduction</a></li>
 <li><a href="#world-value-survey-wvs"><span class="toc-section-number">2</span> World Value Survey (WVS)</a></li>
 <li><a href="#wpp"><span class="toc-section-number">3</span> WPP</a></li>
+<li><a href="#the-join"><span class="toc-section-number">4</span> The join</a></li>
+<li><a href="#final-cleaning-and-fun"><span class="toc-section-number">5</span> Final cleaning and fun</a></li>
 <li><a href="#references">References</a></li>
 </ul>
 </div>
@@ -526,12 +528,18 @@ mxT &lt;-
          year &lt;= 2015)</code></pre>
 <p>In the middle of the pipe we see a step <code>arrange()</code>. This function sorts rows according to the variables listed from left to write. We needed to put this here because we needed <code>year</code> to be numeric for proper sorting. We need the sorting because some lifetable calculations are sequentially dependent within age. After the sorting operation, we continue lifetables <em>within</em> subsets (ergo <code>group_by() + mutate()</code>), including our above-defined helper function <code>px_to_lx()</code>, and we needn’t go further than <code>nLx</code>. Finally let’s standardize one last column name and select only those years that fall within the WVS range.</p>
 <p>Now we’re ready to do our join operation. Look at how much overhead was needed in order to turn these two datasets into joinable things!! The lesson: you need to have 1) identically named and 2) identically coded columns on which to join. It would have been a heck of alot easier to join if we only needed to join on ISO codes! But hey, we have super awesome detailed and nested demographic data that we wish to preserve in the name of science.</p>
+</div>
+<div id="the-join" class="section level1">
+<h1><span class="header-section-number">4</span> The join</h1>
 <p>Here’s the join operation. Remember we looked at the <code>dplyr</code> <a href="https://rstudio.com/wp-content/uploads/2015/02/data-wrangling-cheatsheet.pdf">Data Wrangling Cheat Sheet</a> to figure out which merge operation to do.</p>
 <pre class="r"><code>mxT &lt;- left_join(
   mxT,            
   WVS, 
   by = c(&quot;ISO&quot;,&quot;sex&quot;,&quot;year&quot;,&quot;age&quot;))</code></pre>
 <p>A left join preserves all rows on the lefts, and adds in as many columns as fit from the right. If there are variable combinations on the right that are not found on the left, then they are lost. This is an intermediate level of efficiency for us: WPP has more countries we guess, an. We’ll want to filter out all the lifetables with no <code>trust</code> observations at all, and impute the <code>NAs</code> in age gaps somehow: two operations.</p>
+</div>
+<div id="final-cleaning-and-fun" class="section level1">
+<h1><span class="header-section-number">5</span> Final cleaning and fun</h1>
 <p>We need a helper function whose job it is to replace NAs with the average of neighboring cells.</p>
 <pre class="r"><code>na_averager &lt;- function(age, prev){
   ind &lt;- is.na(prev)

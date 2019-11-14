@@ -172,6 +172,7 @@ In the middle of the pipe we see a step `arrange()`. This function sorts rows ac
 
 Now we're ready to do our join operation. Look at how much overhead was needed in order to turn these two datasets into joinable things!! The lesson: you need to have 1) identically named and 2) identically coded columns on which to join. It would have been a heck of alot easier to join if we only needed to join on ISO codes! But hey, we have super awesome detailed and nested demographic data that we wish to preserve in the name of science.
 
+# The join
 Here's the join operation. Remember we looked at the `dplyr` [Data Wrangling Cheat Sheet](https://rstudio.com/wp-content/uploads/2015/02/data-wrangling-cheatsheet.pdf) to figure out which merge operation to do.
 ```{r}
 mxT <- left_join(
@@ -182,6 +183,7 @@ mxT <- left_join(
 
 A left join preserves all rows on the lefts, and adds in as many columns as fit from the right. If there are variable combinations on the right that are not found on the left, then they are lost. This is an intermediate level of efficiency for us: WPP has more countries we guess, an. We'll want to filter out all the lifetables with no `trust` observations at all, and impute the `NAs` in age gaps somehow: two operations.
 
+# Final cleaning and fun
 We need a helper function whose job it is to replace NAs with the average of neighboring cells. 
 ```{r}
 na_averager <- function(age, prev){
