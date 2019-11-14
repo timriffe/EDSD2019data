@@ -379,8 +379,8 @@ Max-Planck-Institute for Demographic Research</div></h4>
 <li><a href="#examine-date-columns"><span class="toc-section-number">3.1</span> Examine date columns</a></li>
 </ul></li>
 <li><a href="#validate-date-information"><span class="toc-section-number">4</span> Validate date information</a><ul>
-<li><a href="#test-date-conversion"><span class="toc-section-number">4.1</span> test date conversion</a></li>
-<li><a href="#fix-recorded-day"><span class="toc-section-number">4.2</span> fix recorded day</a></li>
+<li><a href="#test-date-conversion"><span class="toc-section-number">4.1</span> Test date conversion</a></li>
+<li><a href="#fix-recorded-day"><span class="toc-section-number">4.2</span> Fix recorded day</a></li>
 </ul></li>
 <li><a href="#the-date-conversion"><span class="toc-section-number">5</span> The date conversion!</a></li>
 <li><a href="#calculate-individual-exposures-for-mortality"><span class="toc-section-number">6</span> Calculate individual exposures for mortality</a><ul>
@@ -487,7 +487,7 @@ convert_date(1,1,2001)   # exactly 0</code></pre>
 <pre class="r"><code>convert_date(31,12,2001) # almost 1</code></pre>
 <pre><code>## [1] 2001.997</code></pre>
 <div id="test-date-conversion" class="section level2">
-<h2><span class="header-section-number">4.1</span> test date conversion</h2>
+<h2><span class="header-section-number">4.1</span> Test date conversion</h2>
 <p>And now we can use it in a pipeline, test run:</p>
 <pre class="r"><code>prof %&gt;% 
   filter(birth_valid &amp; death_valid) %&gt;% 
@@ -498,7 +498,7 @@ convert_date(1,1,2001)   # exactly 0</code></pre>
   select(is_alive, birth_valid, birth_dec, birth_day, birth_month, birth_year, death_year)</code></pre>
 </div>
 <div id="fix-recorded-day" class="section level2">
-<h2><span class="header-section-number">4.2</span> fix recorded day</h2>
+<h2><span class="header-section-number">4.2</span> Fix recorded day</h2>
 <p>Wow, there are lots of cases of day falling in [1,31) but not in the valid range of the month. And here one would need to account for leap years. In all cases, the recorded day exceeds the number of days in the month, so let’s truncate these to the actual last day of the month. In terms of annualized exposure, this will have trivial impact, and clearly these cases shouldn’t be outright discarded. Here’s a helper function, making use of <code>lubridate</code>’s <code>days_in_month()</code> function. If the day is out of range, we truncate, and if it’s in range we return it back.</p>
 <pre class="r"><code>fix_day &lt;- function(day, month, year){
   max_days &lt;- paste(year, month, &quot;1&quot;, sep =&quot;-&quot;) %&gt;% 

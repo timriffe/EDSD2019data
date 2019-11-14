@@ -99,7 +99,7 @@ WVS <-
   ungroup() 
 ```
 
-# WPP
+# World Population Prospects (WPP)
 The UN uses the same country codes, and ships its data as aggregates in a different shape altogether: almost tidy, but with years going out in the columns. From the `wpp2019` @wpp2019. This package consists in a bunch of datasets, including denominators, rates, and indices. We opted to calculate a Sullivan estimate of trust expectancy, and for this we'll want lifetable exposure `nLx`, which isn't included in the package. We can calculate it from `nMx`, however, which is available in two datasets: `mxF` and `mxM`. We can load them into memory by calling `data(mxF)`, for example.
 ```{r}
 #install.packages("wpp2019")

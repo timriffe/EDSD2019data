@@ -4,7 +4,7 @@ title: |
   | Data Wrangling for EDSDers
   | \vspace{1.5cm} \LARGE\emph{Module outline}
 author: |
-  | United Nations Population Division
+  | Centre d'Estudis Demogràfics
   | 11-14 Nov, 2019
   | Tim Riffe
   | Max-Planck-Institute for Demographic Research
@@ -27,7 +27,7 @@ bibliography: references.bib
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## Introduction
+# Introduction
 Genealogical data can have different structures, ranging from complicated relational trees to tidy individualized data with minimal parentage links. Genealogical data is a particular kind of network data, and any data structure that exists to represent a network can be used to represent it. Such data allow you to explore dimensions of population structure that cannot be known from a census, and that no population register would ever allow you to calculate. You can also measure fertility, mortality, bereavment, and such things in oddly stratified ways. Diego Alburrez has kindly given me a big hunk of genealogical data from [FamiLinx](https://familinx.org/). These data have been used in large scale projects to detect demographic patterns, an dyou can find a good description of the data in @kaplanis2018quantitative. He'll give you a module on accounting for biases in online data (or similar) and may use genealogical data as a case study, so let's get some exercise wrangling with it.
 
 Prerequisites: we'll use the `here` package and `tidyverse` tools for the time being.
@@ -37,16 +37,15 @@ library(tidyverse)
 library(lubridate)
 ```
 
-
 # FamiLinx
-
+Diego Alburrez kindly provided me with data I have used for this example, but AFAIK I can't simply post it on the internet for all to download. If you'd like to work through this example, please contact me directly for the data. If you've got a project setup for this module with a `Data` folder, then  just stick the data in a subfolder called `FamiLinx`.
 ```{r}
 links <- readRDS(here::here("Data","FamiLinx","links_de.RDS"))
-prof <- readRDS(here::here("Data","FamiLinx","prof_de.RDS"))
+prof  <- readRDS(here::here("Data","FamiLinx","prof_de.RDS"))
 # glimpse(prof)
 ```
 
-# get decimal event dates.
+# Decimal event dates.
 The dated events for each life in these data include birth, baptism, death, and burial. Notice that each event date is currently represented with multiple columns, pertinently one each for year, month, and day of the event. These ought to all be integers, but they are not. Let's convert them before going further.
 
 This sort of thing can be done even more laboriously, we can show some more.
@@ -56,7 +55,7 @@ prof <- prof %>%
   mutate_at(grep(colnames(.),pattern = "_month", value = TRUE), as.integer)
 ```
 
-## examine date columns
+## Examine date columns
 These will be messy data, let's have a look:
 ```{r}
 prof %>% pull(death_day) %>% table()
@@ -77,7 +76,7 @@ Time out to brainstorm:
 
 - Given the nature of these data, what might we do to infer erroneous dates?
 
-## validate date information
+# Validate date information
 Now back to being pragmatic. Let's make a function that does a logical check for the proper range of days and months, and we'll also use it to filter births and deaths after the year 1500. We can keep people that are still alive, why not?
 
 ```{r}
@@ -118,7 +117,7 @@ convert_date(1,7,2001)   # about .5
 convert_date(31,12,2001) # almost 1
 ```
 
-## test date conversion
+## Test date conversion
 And now we can use it in a pipeline, test run:
 ```{r, eval = FALSE}
 prof %>% 
@@ -130,7 +129,7 @@ prof %>%
   select(is_alive, birth_valid, birth_dec, birth_day, birth_month, birth_year, death_year)
 ```
 
-## fix recorded day
+## Fix recorded day
 Wow, there are lots of cases of day falling in [1,31) but not in the valid range of the month. And here one would need to account for leap years. In all cases, the recorded day exceeds the number of days in the month, so let's truncate these to the actual last day of the month. In terms of annualized exposure, this will have trivial impact, and clearly these cases shouldn't be outright discarded. Here's a helper function, making use of `lubridate`'s `days_in_month()` function. If the day is out of range, we truncate, and if it's in range we return it back.
 
 ```{r}
@@ -144,7 +143,7 @@ fix_day(31,2,2001)
 fix_day(31,2,2000)
 ```
 
-## finally the date conversion!
+# The date conversion!
 
 We'll create the new decimal date columns and generate some other variables while at it.
 
@@ -173,6 +172,7 @@ prof <- prof %>%
          cohort = floor(birth_year))
 #glimpse(prof)
 ```
+
 ## Tabulate deaths in Lexis triangles
 Tabulation is two steps: 1) declare groups, 2) count cases inside groups using `n()` inside `summarize()`.
 ```{r}
@@ -187,7 +187,6 @@ APC <-
 
 ## impute empty cells with 0s using join operation
 Now we have deaths tabulated, but to get exposures, it will help to impute 0s so that we don't have gaps in the data.
-
 ```{r}
 
 APCgrid <- expand.grid(completed_age_at_death = 0:100,
@@ -196,7 +195,8 @@ APCgrid <- expand.grid(completed_age_at_death = 0:100,
   filter(period >= cohort)
 ```
 
-
+# TODO
+We never went forward with this lesson, so this much is left here in case anyone finds it handy. I would have tried to find a nice way to calculate exposures and rates starting from this point. We would have looked to see if rates in particular age ranges are more plausible than others, and perhaps tried to plot some trends in synthetic indices or else moved on to kinship. 
 
 
 

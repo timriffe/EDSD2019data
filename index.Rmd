@@ -50,13 +50,28 @@ This index is to be updated as materials are finalized. It's more for posterity 
 
 [Session 2](BigFlatFiles) (Tuesday, 12 Nov)
 
-details to be filled in
+1. [Introduction](BigFlatFiles#introduction)
+2. [Reading fixed width files](BigFlatFiles#reading-a-fixed-width-file)
+3. [Redistribute missing aggregates](Redistribute missing time of day)
+4. [Make a surface](BigFlatFiles#visualize-it-surface)
+5. [Make a ridgeplot](BigFlatFiles#visualize-it-ridgeplot)
 
 [Session 3](MergeMania) (Wednesday, 13 Nov)
 
-details to be filled in
+1. [Introduction](MergeMania#introduction)
+2. [World Values Survey](MergeMania#world-value-survey-wvs)
+3. [World Population Prospects](MergeMania#world-population-prospects-wpp)
+4. [Joining](MergeMania#the-join)
+5. [Clean up](MergeMania#final-cleaning-and-fun)
 
 [Session 4](GenealogicalData) (Thursday, 22 Aug)
 
+I had started a script on genealogical data, but we opted to spend Thursday getting started on assignments. Full workshop mode.
+
+1. [Introduction](GenealogicalData#introduction)
+2. [FamiLinx data](GenealogicalData#familinx)
+3. [Decimal dates](GenealogicalData#get-decimal-event-dates)
+4.
+5.
 
 
