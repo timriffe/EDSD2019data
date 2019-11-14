@@ -493,13 +493,8 @@ NAT %&gt;%
 <div id="visualize-it-ridgeplot" class="section level1">
 <h1><span class="header-section-number">5</span> Visualize it: ridgeplot</h1>
 <p>We trucate <code>mage</code> in order to remove noise that might distort the pattern, but we could recover more of the surface if it were smoothed. We might be able to recover more definition in the time of day pattern if it were represented as lines. Let’s see:</p>
-<pre class="r"><code>library(ggridges)</code></pre>
-<pre><code>## 
-## Attaching package: 'ggridges'</code></pre>
-<pre><code>## The following object is masked from 'package:ggplot2':
-## 
-##     scale_discrete_manual</code></pre>
-<pre class="r"><code>NAT %&gt;% 
+<pre class="r"><code>library(ggridges)
+NAT %&gt;% 
   # first group to 10 min intervals, minute precision is the source
   # of much of our noise problem
   mutate(min10 = minute - minute %% 10) %&gt;% 
